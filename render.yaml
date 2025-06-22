@@ -1,50 +1,63 @@
-# A robust, scalable blueprint for the AI Video Generator
+# The final, most robust blueprint for the AI Video Generator.
+# This version explicitly defines environment variables for each service
+# to prevent any parsing errors.
 
 services:
-  # The Web Service: Handles user requests and serves the frontend.
+  # 1. The Web Service (The "Waiter")
   - type: web
     name: ai-video-web
     env: python
-    # Health check to ensure the web service is responsive
     healthCheckPath: /health
-    # Auto-deploys when you push to the main branch
-    autoDeploy: true
+    # Common build/start commands and env vars for this service
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      # Secrets that you will set in the Render dashboard
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # This tells our Python app how to find the Redis queue
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ai-video-queue
+          property: connectionString
 
-  # The Background Worker: Does the heavy lifting of video creation.
+  # 2. The Background Worker (The "Kitchen")
   - type: worker
     name: ai-video-worker
     env: python
-    # The command to start the worker process (defined in worker.py)
-    startCommand: python -m worker
-    # Auto-deploys alongside the web service
-    autoDeploy: true
+    # Common build/start commands and env vars for this service
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python -m worker"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      # Secrets that you will set in the Render dashboard
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # This tells our Python app how to find the Redis queue
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ai-video-queue
+          property: connectionString
 
-  # The Redis Queue: Connects the web service and the worker.
+  # 3. The Redis Queue (The "Order Queue")
   - type: redis
     name: ai-video-queue
-    plan: free # The free Redis plan is perfect for this
-    maxmemoryPolicy: allkeys-lru # Recommended policy for free tier
-
-# Common settings for both the web service and the worker
-envVars:
-  # The Python version to use
-  - key: PYTHON_VERSION
-    value: 3.11
-  # The command to install all dependencies
-  - key: BUILD_COMMAND
-    value: "pip install -r requirements.txt"
-  # Secrets that you will set in the Render dashboard
-  - key: ELEVENLABS_API_KEY
-    sync: false
-  - key: CLOUDINARY_CLOUD_NAME
-    sync: false
-  - key: CLOUDINARY_API_KEY
-    sync: false
-  - key: CLOUDINARY_API_SECRET
-    sync: false
-  # This tells our Python services how to find the Redis queue
-  - key: REDIS_URL
-    fromService:
-      type: redis
-      name: ai-video-queue
-      property: connectionString
+    plan: free
+    maxmemoryPolicy: allkeys-lru
