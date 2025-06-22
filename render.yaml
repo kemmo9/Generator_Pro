@@ -1,6 +1,6 @@
 # The final, most robust blueprint for the AI Video Generator.
 # This version explicitly defines environment variables for each service
-# to prevent any parsing errors.
+# and includes the required IP allow list for the Redis service.
 
 services:
   # 1. The Web Service (The "Waiter")
@@ -61,3 +61,5 @@ services:
     name: ai-video-queue
     plan: free
     maxmemoryPolicy: allkeys-lru
+    # THIS IS THE NEW LINE TO FIX THE ERROR
+    ipAllowList: [] # An empty list allows access from all other Render services
