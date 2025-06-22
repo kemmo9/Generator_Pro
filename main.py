@@ -7,6 +7,9 @@ from fastapi.templating import Jinja2Templates
 from rq import Queue
 from typing import Dict
 
+# THIS IS THE NEW IMPORT LINE
+from tasks import create_video_task 
+
 # --- Configuration ---
 # Connect to the Redis queue provided by Render
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -31,9 +34,9 @@ async def queue_video_task(payload: Dict = Body(...)):
     if not script:
         raise HTTPException(status_code=400, detail="Script is empty.")
     
-    # Enqueue the job. 'tasks.create_video_task' is the function to run.
-    # The result_ttl keeps the job result info for 1 hour.
-    job = q.enqueue('tasks.create_video_task', script, job_timeout='10m', result_ttl=3600)
+    # THIS IS THE MODIFIED ENQUEUE LINE
+    # We pass the function object directly, not its name as a string.
+    job = q.enqueue(create_video_task, script, job_timeout='10m', result_ttl=3600)
     
     # Return the Job ID to the frontend
     return JSONResponse({"job_id": job.id})
