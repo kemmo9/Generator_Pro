@@ -4,6 +4,6 @@ python-multipart
 requests
 moviepy
 Jinja2
-rq # The Redis Queue library
-python-dotenv # For local development
+rq==1.15.1
+python-dotenv
 cloudinary
