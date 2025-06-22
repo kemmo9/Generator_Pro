@@ -13,7 +13,7 @@ services:
     startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11
+        value: 3.11.4 # <--- THIS LINE IS THE FIX
       # Secrets that you will set in the Render dashboard
       - key: ELEVENLABS_API_KEY
         sync: false
@@ -39,7 +39,7 @@ services:
     startCommand: "python -m worker"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11
+        value: 3.11.4 # <--- THIS LINE IS ALSO THE FIX
       # Secrets that you will set in the Render dashboard
       - key: ELEVENLABS_API_KEY
         sync: false
@@ -61,5 +61,4 @@ services:
     name: ai-video-queue
     plan: free
     maxmemoryPolicy: allkeys-lru
-    # THIS IS THE NEW LINE TO FIX THE ERROR
-    ipAllowList: [] # An empty list allows access from all other Render services
+    ipAllowList: []
