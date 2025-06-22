@@ -2,6 +2,9 @@ import os
 import redis
 from rq import Worker, Queue
 
+# THIS IS THE NEW IMPORT LINE
+import tasks
+
 # The list of queues this worker will listen to.
 listen = ['default']
 
@@ -12,9 +15,7 @@ redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
 conn = redis.from_url(redis_url)
 
 if __name__ == '__main__':
-    # THIS IS THE KEY FIX:
-    # We create the list of queues using a list comprehension,
-    # explicitly passing the connection to each Queue object.
+    # We create the list of queues, explicitly passing the connection to each Queue object.
     queues = [Queue(name, connection=conn) for name in listen]
     
     # Now we create the worker, which also needs the connection.
