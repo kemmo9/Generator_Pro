@@ -12,11 +12,12 @@ redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
 conn = redis.from_url(redis_url)
 
 if __name__ == '__main__':
-    # Create the list of Queue objects
-    queues = list(map(Queue, listen))
+    # THIS IS THE KEY FIX:
+    # We create the list of queues using a list comprehension,
+    # explicitly passing the connection to each Queue object.
+    queues = [Queue(name, connection=conn) for name in listen]
     
-    # Create the Worker and pass the queues and connection directly
-    # This is the modern, correct pattern.
+    # Now we create the worker, which also needs the connection.
     worker = Worker(queues, connection=conn)
     
     # Start the worker process. It will now wait for jobs.
