@@ -1,20 +1,16 @@
-# The final, most robust blueprint for the AI Video Generator.
-# This version explicitly defines environment variables for each service
-# and includes the required IP allow list for the Redis service.
+# The final, correct blueprint using a decoupled architecture.
 
 services:
-  # 1. The Web Service (The "Waiter")
+  # 1. The Web Service
   - type: web
     name: ai-video-web
     env: python
     healthCheckPath: /health
-    # Common build/start commands and env vars for this service
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.4 # <--- THIS LINE IS THE FIX
-      # Secrets that you will set in the Render dashboard
+        value: 3.11.4
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
@@ -23,24 +19,23 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      # This tells our Python app how to find the Redis queue
       - key: REDIS_URL
         fromService:
           type: redis
           name: ai-video-queue
           property: connectionString
 
-  # 2. The Background Worker (The "Kitchen")
+  # 2. The Background Worker
   - type: worker
     name: ai-video-worker
     env: python
-    # Common build/start commands and env vars for this service
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python -m worker"
+    # THIS IS THE KEY FIX: We use the official rq worker command
+    # The --preload flag tells the worker to load our tasks.py file at startup.
+    startCommand: "rq worker --preload tasks default"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.4 # <--- THIS LINE IS ALSO THE FIX
-      # Secrets that you will set in the Render dashboard
+        value: 3.11.4
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
@@ -49,14 +44,13 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      # This tells our Python app how to find the Redis queue
       - key: REDIS_URL
         fromService:
           type: redis
           name: ai-video-queue
           property: connectionString
 
-  # 3. The Redis Queue (The "Order Queue")
+  # 3. The Redis Queue
   - type: redis
     name: ai-video-queue
     plan: free
