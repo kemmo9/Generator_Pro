@@ -5,30 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Video Generator</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 2rem; display: flex; justify-content: center;}
-        .container { max-width: 600px; width: 100%; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 2rem; display: flex; justify-content: center;}
+        .container { max-width: 700px; width: 100%; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #1c1e21; }
-        textarea { width: 100%; height: 150px; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 1rem; margin-bottom: 1rem; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; font-size: 1.2rem; background-color: #1877f2; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.3s; }
-        button:disabled { background-color: #9cb4d8; cursor: not-allowed; }
-        .status { text-align: center; margin-top: 1rem; font-weight: bold; min-height: 24px; }
-        .hint { font-size: 0.9rem; color: #606770; margin-top: 1rem; }
+        .dialogue-box { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 1.5rem; padding: 1rem; max-height: 40vh; overflow-y: auto;}
+        .dialogue-row { display: flex; align-items: center; margin-bottom: 1rem; gap: 10px; }
+        .dialogue-row select { font-size: 1rem; padding: 8px; border-radius: 6px; border: 1px solid #ccc; background-color: #f8f8f8;}
+        .dialogue-row input { flex-grow: 1; font-size: 1rem; padding: 8px; border-radius: 6px; border: 1px solid #ccc; }
+        .dialogue-row .remove-btn { background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-weight: bold; cursor: pointer; font-size: 1.2rem; line-height: 30px; text-align: center;}
+        .controls { display: flex; justify-content: space-between; gap: 1rem; }
+        .controls button { width: 100%; padding: 12px; font-size: 1.2rem; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.3s; }
+        #add-dialogue-btn { background-color: #4CAF50; }
+        #generate-btn { background-color: #1877f2; }
+        #generate-btn:disabled { background-color: #9cb4d8; cursor: not-allowed; }
+        .status { text-align: center; margin-top: 1.5rem; font-weight: bold; min-height: 24px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>AI Character Commentary</h1>
-        <form id="video-form">
-            <label for="script">Enter your script:</label>
-            <textarea id="script" name="script" placeholder="[Peter]: This is the first line.
-[Brian]: And this is the second."></textarea>
-            <button type="submit" id="generate-btn">Generate Video</button>
-        </form>
-        <div class="status" id="status-area"></div>
-        <div class="hint">
-            <strong>Hint:</strong> Use `[Peter]:` or `[Brian]:` to assign dialogue. Each line will be a new scene. The video may take a minute to generate.
+        
+        <!-- The new Chatbox Area -->
+        <div id="dialogue-container" class="dialogue-box">
+            <!-- Dialogue rows will be added here by JavaScript -->
         </div>
+
+        <!-- The new controls -->
+        <div class="controls">
+            <button id="add-dialogue-btn">Add Dialogue Line</button>
+            <button id="generate-btn">Generate Video</button>
+        </div>
+
+        <div class="status" id="status-area"></div>
     </div>
+
+    <!-- This hidden template is used by JavaScript to create new rows -->
+    <template id="dialogue-row-template">
+        <div class="dialogue-row">
+            <select class="character-select">
+                <option value="peter">Peter</option>
+                <option value="brian">Brian</option>
+                <!-- Add more characters here -->
+            </select>
+            <input type="text" class="dialogue-input" placeholder="Enter dialogue...">
+            <button class="remove-btn" title="Remove line">×</button>
+        </div>
+    </template>
 
     <script src="/static/script.js"></script>
 </body>
