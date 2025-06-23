@@ -1,4 +1,4 @@
-# The final, correct blueprint using a custom worker script.
+# The final, correct blueprint using a custom worker script and the FFMPEG buildpack.
 
 services:
   # 1. The Web Service
@@ -29,8 +29,10 @@ services:
   - type: worker
     name: ai-video-worker
     env: python
+    # THIS IS THE FINAL FIX: We add the buildpack to install FFMPEG for MoviePy.
+    buildPacks:
+      - url: https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest
     buildCommand: "pip install -r requirements.txt"
-    # THE FINAL START COMMAND: We run our new worker script directly.
     startCommand: "python worker.py"
     envVars:
       - key: PYTHON_VERSION
