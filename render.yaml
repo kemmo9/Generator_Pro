@@ -1,4 +1,4 @@
-# The final, correct blueprint using a decoupled architecture and an explicit start command.
+# The final, correct blueprint using a custom worker script.
 
 services:
   # 1. The Web Service
@@ -30,8 +30,8 @@ services:
     name: ai-video-worker
     env: python
     buildCommand: "pip install -r requirements.txt"
-    # THIS IS THE FINAL, BULLETPROOF FIX: We use "python -m rq"
-    startCommand: "python -m rq worker --preload tasks default"
+    # THE FINAL START COMMAND: We run our new worker script directly.
+    startCommand: "python worker.py"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.4
