@@ -1,5 +1,3 @@
-# The final, correct main.py for a decoupled system.
-
 import os
 import redis
 from fastapi import FastAPI, Request, Body, HTTPException
@@ -7,9 +5,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from rq import Queue
-from typing import Dict
-
-# NO import from tasks.py
+from typing import Dict, List
 
 # --- Configuration ---
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -28,12 +24,13 @@ async def read_root(request: Request):
 
 @app.post("/api/generate-video")
 async def queue_video_task(payload: Dict = Body(...)):
-    script = payload.get("script", "")
-    if not script:
-        raise HTTPException(status_code=400, detail="Script is empty.")
+    # UPDATED: We now expect a 'dialogue' key with a list of objects
+    dialogue_data = payload.get("dialogue", [])
+    if not dialogue_data:
+        raise HTTPException(status_code=400, detail="Dialogue data is empty.")
     
-    # We pass the function's name as a string.
-    job = q.enqueue('tasks.create_video_task', script, job_timeout='10m', result_ttl=3600)
+    # We pass the entire list to the worker task
+    job = q.enqueue('tasks.create_video_task', dialogue_data, job_timeout='10m', result_ttl=3600)
     
     return JSONResponse({"job_id": job.id})
 
