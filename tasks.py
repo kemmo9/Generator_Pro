@@ -11,7 +11,7 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 
 # --- Configuration ---
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-VOICE_IDS = { "peter": "N2lVSenPjV6F_h5T2u2K", "brian": "yoZ06aMzmToWyo4y4TfN" }
+VOICE_IDS = { "peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq" }
 BACKGROUND_VIDEO_PATH = "static/background_minecraft.mp4"
 CHARACTER_IMAGE_PATHS = { "peter": "static/peter.png", "brian": "static/brian.png" }
 
