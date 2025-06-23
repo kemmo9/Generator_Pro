@@ -1,3 +1,5 @@
+# The final, correct main.py for a decoupled system.
+
 import os
 import redis
 from fastapi import FastAPI, Request, Body, HTTPException
@@ -7,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from rq import Queue
 from typing import Dict
 
-# NO MORE IMPORT FROM TASKS - THIS IS KEY
+# NO import from tasks.py
 
 # --- Configuration ---
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -30,8 +32,7 @@ async def queue_video_task(payload: Dict = Body(...)):
     if not script:
         raise HTTPException(status_code=400, detail="Script is empty.")
     
-    # We go back to passing the function's name as a string.
-    # This decouples the web service from the worker's code.
+    # We pass the function's name as a string.
     job = q.enqueue('tasks.create_video_task', script, job_timeout='10m', result_ttl=3600)
     
     return JSONResponse({"job_id": job.id})
