@@ -8,7 +8,7 @@ from moviepy.editor import *
 # --- Configuration ---
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {
-    "peter": "N2lVSenPjV6F_h5T2u2K", # Pre-made "Adam" voice
+    "peter": "BrXwCQ7xdzi6T5h2idQP", # Pre-made "Adam" voice
     "brian": "yoZ06aMzmToWyo4y4TfN", # Pre-made "Dorothy" voice
 }
 BACKGROUND_VIDEO_PATH = "static/background_minecraft.mp4"
