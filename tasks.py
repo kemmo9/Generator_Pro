@@ -8,10 +8,7 @@ import PIL.Image
 
 # ==============================================================================
 # PILLOW / MOVIEPY COMPATIBILITY FIX
-# Newer versions of Pillow (10.0.0+) have removed the ANTIALIAS attribute.
-# This is a backwards-compatibility "shim" to make sure moviepy continues to work.
-# We check if the attribute exists, and if it doesn't, we create it and point
-# it to the new, correct attribute, LANCZOS.
+# This is still needed and is correct.
 # ------------------------------------------------------------------------------
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
@@ -22,7 +19,7 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {
     "peter": "BrXwCQ7xdzi6T5h2idQP", # Pre-made "Adam" voice
-    "brian": "T7vbPPs7VTtTbkUlXdGN", # Pre-made "Dorothy" voice
+    "brian": "jpuuy9amUxVn651Jjmtq", # Pre-made "Dorothy" voice
 }
 BACKGROUND_VIDEO_PATH = "static/background_minecraft.mp4"
 CHARACTER_IMAGE_PATHS = {
@@ -39,7 +36,7 @@ cloudinary.config(
 )
 
 def generate_audio_elevenlabs(text: str, voice_id: str, filename: str):
-    # This function is now correct and has good error logging.
+    # This function is correct.
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {"Accept": "audio/mpeg", "Content-Type": "application/json", "xi-api-key": ELEVENLABS_API_KEY}
     data = {"text": text, "model_id": "eleven_monolingual_v1", "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}}
@@ -56,7 +53,6 @@ def generate_audio_elevenlabs(text: str, voice_id: str, filename: str):
         return False, error_details
 
 def create_video_task(script: str):
-    # The rest of this function is correct.
     lines = [line.strip() for line in script.split('\n') if line.strip()]
     dialogue_clips = []
     temp_files = []
@@ -76,7 +72,9 @@ def create_video_task(script: str):
             if not success:
                 raise Exception(error_message)
             
-            audio_clip = AudioFileClip(audio_filename)
+            # THIS IS THE ONE-LINE FIX FOR THE AUDIO VOLUME
+            audio_clip = AudioFileClip(audio_filename).audio_normalize()
+            
             dialogue_clips.append({"character": character, "text": text, "audio": audio_clip})
         
         if not dialogue_clips:
