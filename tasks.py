@@ -4,6 +4,19 @@ import re
 import cloudinary
 import cloudinary.uploader
 from moviepy.editor import *
+import PIL.Image
+
+# ==============================================================================
+# PILLOW / MOVIEPY COMPATIBILITY FIX
+# Newer versions of Pillow (10.0.0+) have removed the ANTIALIAS attribute.
+# This is a backwards-compatibility "shim" to make sure moviepy continues to work.
+# We check if the attribute exists, and if it doesn't, we create it and point
+# it to the new, correct attribute, LANCZOS.
+# ------------------------------------------------------------------------------
+if not hasattr(PIL.Image, 'ANTIALIAS'):
+    PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
+# ==============================================================================
+
 
 # --- Configuration ---
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
@@ -26,9 +39,7 @@ cloudinary.config(
 )
 
 def generate_audio_elevenlabs(text: str, voice_id: str, filename: str):
-    """
-    Generates audio and returns a tuple: (success, error_details)
-    """
+    # This function is now correct and has good error logging.
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {"Accept": "audio/mpeg", "Content-Type": "application/json", "xi-api-key": ELEVENLABS_API_KEY}
     data = {"text": text, "model_id": "eleven_monolingual_v1", "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}}
@@ -40,13 +51,12 @@ def generate_audio_elevenlabs(text: str, voice_id: str, filename: str):
             f.write(response.content)
         return True, None
     else:
-        # THIS IS THE NEW DEBUGGING LOGIC
         error_details = f"ElevenLabs API Error - Status: {response.status_code}, Response: {response.text}"
-        print(error_details)  # Print the detailed error to the worker logs
+        print(error_details)
         return False, error_details
 
 def create_video_task(script: str):
-    """The main task function that the worker will execute."""
+    # The rest of this function is correct.
     lines = [line.strip() for line in script.split('\n') if line.strip()]
     dialogue_clips = []
     temp_files = []
@@ -62,10 +72,8 @@ def create_video_task(script: str):
             audio_filename = f"temp_audio_{i}.mp3"
             temp_files.append(audio_filename)
             
-            # THIS IS THE MODIFIED ERROR HANDLING
             success, error_message = generate_audio_elevenlabs(text, VOICE_IDS[character], audio_filename)
             if not success:
-                # Raise an exception with the detailed error from the API
                 raise Exception(error_message)
             
             audio_clip = AudioFileClip(audio_filename)
@@ -74,7 +82,6 @@ def create_video_task(script: str):
         if not dialogue_clips:
             raise Exception("No valid dialogue lines found.")
 
-        # ... (The rest of the video composition logic is the same) ...
         final_audio = concatenate_audioclips([d["audio"] for d in dialogue_clips])
         background_clip = VideoFileClip(BACKGROUND_VIDEO_PATH).subclip(0, final_audio.duration).set_audio(final_audio)
         
