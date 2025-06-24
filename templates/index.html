@@ -9,35 +9,104 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
         
-        /* NEW: Dark Theme Color Palette */
+        /* NEW: Professional Dark Theme Color Palette */
         :root {
-            --dark-bg: #1a1a2e;
-            --container-bg: #16213e;
-            --accent-blue: #0f3460;
-            --light-text: #e94560;
-            --button-primary: #1877f2;
-            --button-secondary: #4CAF50;
-            --input-bg: #0f3460;
-            --input-border: #e94560;
+            --bg-deep-dark: #0d1117;       /* Deepest background, like GitHub */
+            --bg-container: #161b22;      /* Main container background */
+            --bg-dialogue-box: #0d1117;   /* Dialogue box is darker, as requested */
+            --bg-input: #010409;          /* Input fields background */
+            --text-primary: #c9d1d9;      /* Primary text color, off-white */
+            --text-secondary: #8b949e;    /* Secondary/hint text color */
+            --border-color: #30363d;      /* Default border color */
+            --border-focus: #58a6ff;      /* Border color on focus */
+            --button-primary: #238636;    /* Green for primary actions */
+            --button-secondary: #30363d;  /* Dark grey for secondary actions */
         }
 
-        body { font-family: 'Poppins', sans-serif; background: var(--dark-bg); margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; color: var(--light-text); }
-        .header { width: 100%; background: var(--container-bg); padding: 1rem 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; /* NEW: Centered Logo */ box-sizing: border-box; }
-        .logo { font-size: 1.8rem; font-weight: 700; color: var(--light-text); }
-        .container { max-width: 800px; width: 100%; background: var(--container-bg); margin: 2rem; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-        .how-to { text-align: center; color: var(--light-text); opacity: 0.8; margin-bottom: 2rem; }
-        .option-box { margin-bottom: 2rem; }
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background: var(--bg-deep-dark); 
+            margin: 0; padding: 0; 
+            display: flex; flex-direction: column; align-items: center; 
+            color: var(--text-primary); 
+        }
+        .header { 
+            width: 100%; 
+            background: var(--bg-container); 
+            padding: 1rem 2rem; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5); 
+            /* NEW: Centered Logo */
+            display: flex; align-items: center; justify-content: center; 
+            box-sizing: border-box; 
+            border-bottom: 1px solid var(--border-color);
+        }
+        .logo { font-size: 1.8rem; font-weight: 700; }
+        .container { 
+            max-width: 800px; width: 100%; 
+            background: var(--bg-container); 
+            margin: 2rem; padding: 2.5rem; border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+        }
+        .how-to { text-align: center; color: var(--text-secondary); margin-bottom: 2rem; }
+        
+        /* NEW: Options stacked vertically */
+        .options-container { margin-bottom: 2rem; }
+        .option-box { margin-bottom: 1rem; }
         .option-box label { font-weight: 600; display: block; margin-bottom: 0.5rem; }
-        .option-box select { width: 100%; font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--light-text); }
-        .dialogue-box { border: 1px solid var(--accent-blue); border-radius: 8px; margin-bottom: 1.5rem; padding: 1.5rem; max-height: 50vh; overflow-y: auto; background: var(--accent-blue);}
+        .option-box select { 
+            width: 100%; font-size: 1rem; padding: 10px; 
+            border-radius: 6px; 
+            /* NEW: Smoother, thicker borders */
+            border: 2px solid var(--border-color); 
+            background: var(--bg-input); 
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .option-box select:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        }
+
+        /* NEW: Dialogue box darker than container */
+        .dialogue-box { 
+            border: 2px solid var(--border-color);
+            border-radius: 8px; margin-bottom: 1.5rem; padding: 1.5rem; 
+            max-height: 50vh; overflow-y: auto; 
+            background: var(--bg-dialogue-box);
+        }
         .dialogue-row { display: flex; align-items: center; margin-bottom: 1.5rem; gap: 15px; }
+        
         /* NEW: Alternating Row Layout */
         .dialogue-row:nth-child(even) { flex-direction: row-reverse; }
-        .dialogue-row select { font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--light-text); }
-        .dialogue-row textarea { flex-grow: 1; font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid var(--input-border); resize: vertical; min-height: 40px; font-family: inherit; background: var(--input-bg); color: var(--light-text); }
-        .dialogue-row .remove-btn { background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 35px; height: 35px; font-weight: bold; cursor: pointer; font-size: 1.5rem; line-height: 35px; text-align: center; flex-shrink: 0;}
+        
+        /* Common styles for inputs/selects in dialogue rows */
+        .dialogue-row select, .dialogue-row textarea {
+            font-size: 1rem; padding: 10px; border-radius: 6px;
+            border: 2px solid var(--border-color); 
+            background-color: var(--bg-input); 
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .dialogue-row select:focus, .dialogue-row textarea:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        }
+        .dialogue-row select { min-width: 120px; /* NEW: Aligns boxes */ }
+        .dialogue-row textarea { flex-grow: 1; resize: vertical; min-height: 44px; font-family: inherit; }
+        .dialogue-row .remove-btn { 
+            background: #8B0000; color: white; border: none; 
+            border-radius: 50%; width: 35px; height: 35px; 
+            font-weight: bold; cursor: pointer; font-size: 1.5rem; 
+            line-height: 35px; text-align: center; flex-shrink: 0;
+        }
         .controls { display: flex; justify-content: space-between; gap: 1rem; }
-        .controls button { width: 100%; padding: 15px; font-size: 1.3rem; font-weight: 600; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.3s; }
+        .controls button { 
+            width: 100%; padding: 15px; font-size: 1.3rem; font-weight: 600; 
+            color: white; border: none; border-radius: 8px; cursor: pointer; 
+            transition: background-color 0.3s; 
+        }
         #add-dialogue-btn { background-color: var(--button-secondary); }
         #generate-btn { background-color: var(--button-primary); }
         #generate-btn:disabled { background-color: #555; cursor: not-allowed; }
@@ -52,26 +121,28 @@
     <div class="container">
         <p class="how-to">Create your next viral hit in seconds! Just add dialogue, choose your style, and let our AI do the magic.</p>
         
-        <div class="option-box">
-            <label for="subtitle-style">Global Subtitle Style</label>
-            <select id="subtitle-style">
-                <option value="standard">Standard (White with Black Outline)</option>
-                <option value="yellow">Bright Yellow</option>
-                <option value="meme">Meme (White, Impact Font)</option>
-            </select>
+        <!-- NEW: Removed grid class to stack options -->
+        <div class="options-container">
+            <div class="option-box">
+                <label for="subtitle-style">Global Subtitle Style</label>
+                <select id="subtitle-style">
+                    <option value="standard">Standard (White with Black Outline)</option>
+                    <option value="yellow">Bright Yellow</option>
+                    <option value="meme">Meme (White, Impact Font)</option>
+                </select>
+            </div>
         </div>
 
         <div id="dialogue-container" class="dialogue-box"></div>
 
         <div class="controls">
             <button id="add-dialogue-btn">Add Dialogue Line</button>
-            <button id="generate-btn">✨ Generate Your Viral Video ✨</button>
+            <button id="generate-btn">✨ Generate Video ✨</button>
         </div>
 
         <div class="status" id="status-area"></div>
     </div>
 
-    <!-- The template now includes the individual placement option -->
     <template id="dialogue-row-template">
         <div class="dialogue-row">
             <select class="character-select">
