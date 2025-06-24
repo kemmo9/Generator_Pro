@@ -3,67 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- SEO Optimization -->
     <title>Make a Clip - Instant AI Video Generator for Social Media</title>
     <meta name="description" content="Effortlessly create viral AI-narrated videos with character commentary, Reddit stories, and custom text. Perfect for TikTok, YouTube Shorts, and Instagram Reels. Try it now!">
     <meta name="keywords" content="ai video generator, text to video, character commentary video, family guy ai video, minecraft parkour video, reddit story video, social media video creator, tiktok video maker">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
-        body { font-family: 'Poppins', sans-serif; background: #f0f2f5; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
-        .header { width: 100%; background: white; padding: 1rem 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; }
-        .logo { font-size: 1.8rem; font-weight: 700; color: #1c1e21; }
-        .nav a { font-size: 1rem; font-weight: 600; color: #1877f2; text-decoration: none; }
-        .container { max-width: 800px; width: 100%; background: white; margin: 2rem; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .how-to { text-align: center; color: #606770; margin-bottom: 2rem; }
-        .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+        
+        /* NEW: Dark Theme Color Palette */
+        :root {
+            --dark-bg: #1a1a2e;
+            --container-bg: #16213e;
+            --accent-blue: #0f3460;
+            --light-text: #e94560;
+            --button-primary: #1877f2;
+            --button-secondary: #4CAF50;
+            --input-bg: #0f3460;
+            --input-border: #e94560;
+        }
+
+        body { font-family: 'Poppins', sans-serif; background: var(--dark-bg); margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; color: var(--light-text); }
+        .header { width: 100%; background: var(--container-bg); padding: 1rem 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; /* NEW: Centered Logo */ box-sizing: border-box; }
+        .logo { font-size: 1.8rem; font-weight: 700; color: var(--light-text); }
+        .container { max-width: 800px; width: 100%; background: var(--container-bg); margin: 2rem; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .how-to { text-align: center; color: var(--light-text); opacity: 0.8; margin-bottom: 2rem; }
+        .option-box { margin-bottom: 2rem; }
         .option-box label { font-weight: 600; display: block; margin-bottom: 0.5rem; }
-        .option-box select { width: 100%; font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
-        .dialogue-box { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 1.5rem; padding: 1.5rem; max-height: 50vh; overflow-y: auto; background: #fafafa;}
-        .dialogue-row { display: flex; align-items: flex-start; margin-bottom: 1.5rem; gap: 15px; }
-        .dialogue-row select { font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid #ccc; background-color: #fff; }
-        /* Using textarea for multi-line input */
-        .dialogue-row textarea { flex-grow: 1; font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid #ccc; resize: vertical; min-height: 40px; font-family: inherit;}
+        .option-box select { width: 100%; font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--light-text); }
+        .dialogue-box { border: 1px solid var(--accent-blue); border-radius: 8px; margin-bottom: 1.5rem; padding: 1.5rem; max-height: 50vh; overflow-y: auto; background: var(--accent-blue);}
+        .dialogue-row { display: flex; align-items: center; margin-bottom: 1.5rem; gap: 15px; }
+        /* NEW: Alternating Row Layout */
+        .dialogue-row:nth-child(even) { flex-direction: row-reverse; }
+        .dialogue-row select { font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--light-text); }
+        .dialogue-row textarea { flex-grow: 1; font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid var(--input-border); resize: vertical; min-height: 40px; font-family: inherit; background: var(--input-bg); color: var(--light-text); }
         .dialogue-row .remove-btn { background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 35px; height: 35px; font-weight: bold; cursor: pointer; font-size: 1.5rem; line-height: 35px; text-align: center; flex-shrink: 0;}
         .controls { display: flex; justify-content: space-between; gap: 1rem; }
         .controls button { width: 100%; padding: 15px; font-size: 1.3rem; font-weight: 600; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.3s; }
-        #add-dialogue-btn { background-color: #4CAF50; }
-        #generate-btn { background-color: #1877f2; }
-        #generate-btn:disabled { background-color: #9cb4d8; cursor: not-allowed; }
+        #add-dialogue-btn { background-color: var(--button-secondary); }
+        #generate-btn { background-color: var(--button-primary); }
+        #generate-btn:disabled { background-color: #555; cursor: not-allowed; }
         .status { text-align: center; margin-top: 1.5rem; font-weight: bold; min-height: 24px; }
-        .sellable-line { text-align: center; margin-top: 1rem; font-size: 0.9rem; color: #888; }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="logo">🎬 Make a Clip</div>
-        <nav class="nav">
-            <a href="#">Home</a>
-        </nav>
     </header>
 
     <div class="container">
         <p class="how-to">Create your next viral hit in seconds! Just add dialogue, choose your style, and let our AI do the magic.</p>
         
-        <!-- New Options Grid -->
-        <div class="options-grid">
-            <div class="option-box">
-                <label for="image-placement">Image Placement</label>
-                <select id="image-placement">
-                    <option value="center">Center</option>
-                    <option value="left">Left</option>
-                    <option value="right">Right</option>
-                    <option value="top">Top</option>
-                    <option value="bottom">Bottom</option>
-                </select>
-            </div>
-            <div class="option-box">
-                <label for="subtitle-style">Subtitle Style</label>
-                <select id="subtitle-style">
-                    <option value="standard">Standard (White with Black Outline)</option>
-                    <option value="yellow">Bright Yellow</option>
-                    <option value="meme">Meme (White, Impact Font)</option>
-                </select>
-            </div>
+        <div class="option-box">
+            <label for="subtitle-style">Global Subtitle Style</label>
+            <select id="subtitle-style">
+                <option value="standard">Standard (White with Black Outline)</option>
+                <option value="yellow">Bright Yellow</option>
+                <option value="meme">Meme (White, Impact Font)</option>
+            </select>
         </div>
 
         <div id="dialogue-container" class="dialogue-box"></div>
@@ -74,17 +69,23 @@
         </div>
 
         <div class="status" id="status-area"></div>
-        <p class="sellable-line">Need more voices or unlimited videos? <a href="#">Check out our Pro plans!</a></p>
     </div>
 
+    <!-- The template now includes the individual placement option -->
     <template id="dialogue-row-template">
         <div class="dialogue-row">
             <select class="character-select">
                 <option value="peter">Peter</option>
                 <option value="brian">Brian</option>
             </select>
-            <!-- Changed to textarea -->
-            <textarea class="dialogue-input" placeholder="Enter multi-line dialogue here..." rows="2"></textarea>
+            <select class="image-placement-select">
+                <option value="center">Center</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+            </select>
+            <textarea class="dialogue-input" placeholder="Enter dialogue..." rows="1"></textarea>
             <button class="remove-btn" title="Remove line">×</button>
         </div>
     </template>
