@@ -5,16 +5,12 @@ import cloudinary.uploader
 from moviepy.editor import *
 import PIL.Image
 
-# Compatibility fix remains the same
-if not hasattr(PIL.Image, 'ANTIALIAS'):
-    PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
-
-# --- Configuration ---
+# ... (Compatibility fix and configurations remain the same) ...
+if not hasattr(PIL.Image, 'ANTIALIAS'): PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-VOICE_IDS = { "peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq" }
+VOICE_IDS = { "peter": "N2lVSenPjV6F_h5T2u2K", "brian": "yoZ06aMzmToWyo4y4TfN" }
 BACKGROUND_VIDEO_PATH = "static/background_minecraft.mp4"
 CHARACTER_IMAGE_PATHS = { "peter": "static/peter.png", "brian": "static/brian.png" }
-
 cloudinary.config(
   cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"),
   api_key = os.getenv("CLOUDINARY_API_KEY"),
@@ -22,64 +18,67 @@ cloudinary.config(
   secure = True
 )
 
-def generate_audio_elevenlabs(text: str, voice_id: str, filename: str):
+# ... (generate_audio_elevenlabs is the same) ...
+def generate_audio_elevenlabs(text, voice_id, filename):
+    # ... same code ...
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {"Accept": "audio/mpeg", "Content-Type": "application/json", "xi-api-key": ELEVENLABS_API_KEY}
     data = {"text": text, "model_id": "eleven_monolingual_v1", "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}}
     response = requests.post(url, json=data, headers=headers)
     if response.status_code == 200:
-        with open(filename, "wb") as f:
-            f.write(response.content)
+        with open(filename, "wb") as f: f.write(response.content)
         return True, None
     else:
         error_details = f"ElevenLabs API Error - Status: {response.status_code}, Response: {response.text}"
         print(error_details)
         return False, error_details
 
-# UPDATED: The function now accepts the list of dialogue objects directly
-def create_video_task(dialogue_data: list):
+# UPDATED: The task now accepts the options dictionary
+def create_video_task(dialogue_data: list, options: dict):
     dialogue_clips = []
     temp_files = []
+
+    # Get options with default fallbacks
+    image_placement = options.get("imagePlacement", "center")
+    subtitle_style = options.get("subtitleStyle", "standard")
+
+    # Define subtitle styles
+    subtitle_styles = {
+        "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
+        "yellow": {"fontsize": 45, "color": "yellow", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
+        "meme": {"fontsize": 50, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 3}
+    }
+    selected_style = subtitle_styles.get(subtitle_style, subtitle_styles["standard"])
+
     try:
-        # NO MORE STRING PARSING! We loop through the structured data.
+        # ... (Audio generation loop is the same) ...
         for i, line_data in enumerate(dialogue_data):
-            character = line_data.get("character")
-            text = line_data.get("text")
-
-            if not all([character, text, character in VOICE_IDS]):
-                continue
-
+            character, text = line_data.get("character"), line_data.get("text")
+            if not all([character, text, character in VOICE_IDS]): continue
             audio_filename = f"temp_audio_{i}.mp3"
             temp_files.append(audio_filename)
-            
             success, error_message = generate_audio_elevenlabs(text, VOICE_IDS[character], audio_filename)
-            if not success:
-                raise Exception(error_message)
-            
+            if not success: raise Exception(error_message)
             audio_clip = AudioFileClip(audio_filename).audio_normalize()
             dialogue_clips.append({"character": character, "text": text, "audio": audio_clip})
-        
-        if not dialogue_clips:
-            raise Exception("No valid dialogue lines to process.")
 
-        # The video composition logic is the same, but it's now more reliable
-        # because the input data is cleaner. THIS FIXES THE BUG.
+        if not dialogue_clips: raise Exception("No valid dialogue to process.")
+
         final_audio = concatenate_audioclips([d["audio"] for d in dialogue_clips])
         background_clip = VideoFileClip(BACKGROUND_VIDEO_PATH).subclip(0, final_audio.duration).set_audio(final_audio)
         
         video_clips_to_compose = [background_clip]
         current_time = 0
         for clip_data in dialogue_clips:
-            # This logic now correctly uses the character from each piece of data
-            # to select the right image.
+            # APPLY a new image placement option
             img_clip = (ImageClip(CHARACTER_IMAGE_PATHS[clip_data["character"]])
                         .set_duration(clip_data["audio"].duration)
                         .set_start(current_time)
-                        .set_position(("center", "center"))
+                        .set_position(image_placement) # Use the selected placement
                         .resize(height=300))
                         
-            txt_clip = (TextClip(clip_data["text"], fontsize=40, color='white', font='Arial-Bold',
-                                 stroke_color='black', stroke_width=2, size=(background_clip.w * 0.8, None), method='caption')
+            # APPLY the new subtitle style
+            txt_clip = (TextClip(clip_data["text"], **selected_style, size=(background_clip.w * 0.8, None), method='caption')
                         .set_duration(clip_data["audio"].duration)
                         .set_start(current_time)
                         .set_position(("center", 0.8), relative=True))
@@ -87,17 +86,16 @@ def create_video_task(dialogue_data: list):
             video_clips_to_compose.extend([img_clip, txt_clip])
             current_time += clip_data["audio"].duration
 
+        # ... (Rest of the video composition and upload is the same) ...
         final_video = CompositeVideoClip(video_clips_to_compose)
         output_filename = "final_video_temp.mp4"
         temp_files.append(output_filename)
         final_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", fps=24, logger=None)
-
         upload_result = cloudinary.uploader.upload(output_filename, resource_type="video")
         return {"video_url": upload_result['secure_url']}
     finally:
+        # ... (Cleanup is the same) ...
         for clip_data in dialogue_clips:
-            if 'audio' in clip_data and clip_data['audio']:
-                clip_data['audio'].close()
+            if 'audio' in clip_data and clip_data['audio']: clip_data['audio'].close()
         for f in temp_files:
-            if os.path.exists(f):
-                os.remove(f)
+            if os.path.exists(f): os.remove(f)
