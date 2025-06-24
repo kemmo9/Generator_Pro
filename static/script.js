@@ -4,9 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate-btn');
     const statusArea = document.getElementById('status-area');
     const rowTemplate = document.getElementById('dialogue-row-template');
-    
-    // Get the new option elements
-    const imagePlacementSelect = document.getElementById('image-placement');
     const subtitleStyleSelect = document.getElementById('subtitle-style');
 
     const addRow = () => {
@@ -30,15 +27,15 @@ document.addEventListener('DOMContentLoaded', () => {
         generateBtn.textContent = 'Gathering Data...';
         statusArea.innerHTML = '';
 
-        // 1. Collect dialogue data
+        // Collect dialogue data INCLUDING individual image placement
         const dialogueRows = document.querySelectorAll('.dialogue-row');
         const dialoguePayload = [];
         dialogueRows.forEach(row => {
             const character = row.querySelector('.character-select').value;
-            // Get value from textarea now
+            const imagePlacement = row.querySelector('.image-placement-select').value;
             const text = row.querySelector('.dialogue-input').value;
             if (text.trim() !== '') {
-                dialoguePayload.push({ character, text });
+                dialoguePayload.push({ character, text, imagePlacement });
             }
         });
 
@@ -49,14 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 2. Collect options data
+        // Collect global options
         const optionsPayload = {
-            imagePlacement: imagePlacementSelect.value,
             subtitleStyle: subtitleStyleSelect.value
         };
 
-        // 3. Combine payloads and send to backend
-        const fullPayload = {
+        // Create the final payload to send to the backend
+        const finalPayload = {
             dialogue: dialoguePayload,
             options: optionsPayload
         };
@@ -67,17 +63,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/generate-video', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(fullPayload),
+                body: JSON.stringify(finalPayload),
             });
 
             if (!response.ok) throw new Error('Failed to queue job.');
 
             const data = await response.json();
             const jobId = data.job_id;
-            statusArea.textContent = `Job queued! Your masterpiece is being rendered...`;
+            statusArea.textContent = `Job queued! Now processing...`;
             generateBtn.textContent = 'Processing...';
             
-            // Polling logic remains the same
+            // Polling logic remains the same and is robust
             const intervalId = setInterval(async () => {
                 const statusResponse = await fetch(`/api/job-status/${jobId}`);
                 if (!statusResponse.ok) return;
@@ -90,15 +86,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     generateBtn.disabled = false;
                     generateBtn.textContent = '✨ Generate Your Viral Video ✨';
                     statusArea.innerHTML = `
-                        <p>Video is ready! Go viral!</p>
-                        <a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer" style="color: #1877f2; text-decoration: none; font-weight: bold;">
-                            Click to Download Your Clip
+                        <p style="font-size: 1.2rem;">Video is ready!</p>
+                        <a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer" download="made_with_makeaclip.mp4" 
+                           style="display: inline-block; padding: 10px 20px; background-color: var(--button-secondary); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                            ⬇️ Download Video
                         </a>`;
                 } else if (statusData.status === 'failed') {
                     clearInterval(intervalId);
                     generateBtn.disabled = false;
                     generateBtn.textContent = '✨ Generate Your Viral Video ✨';
-                    statusArea.textContent = `Job failed. Please check worker logs.`;
+                    statusArea.textContent = `Job failed. The AI might be tired. Please check the logs or try again.`;
                 }
             }, 5000);
 
