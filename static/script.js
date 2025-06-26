@@ -4,8 +4,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate-btn');
     const statusArea = document.getElementById('status-area');
     const rowTemplate = document.getElementById('dialogue-row-template');
-    const subtitleStyleSelect = document.getElementById('subtitle-style');
+    const backgroundSelector = document.getElementById('background-selector');
 
+    // --- Background Selection Logic ---
+    backgroundSelector.addEventListener('click', (event) => {
+        const selectedOption = event.target.closest('.background-option');
+        if (!selectedOption) return;
+
+        // Remove 'selected' class from all options
+        document.querySelectorAll('.background-option').forEach(opt => opt.classList.remove('selected'));
+        
+        // Add 'selected' class to the clicked option
+        selectedOption.classList.add('selected');
+    });
+
+    // --- Dialogue Row Logic ---
     const addRow = () => {
         const templateClone = rowTemplate.content.cloneNode(true);
         dialogueContainer.appendChild(templateClone);
@@ -15,24 +28,24 @@ document.addEventListener('DOMContentLoaded', () => {
     addRow();
 
     addDialogueBtn.addEventListener('click', addRow);
-
     dialogueContainer.addEventListener('click', (event) => {
         if (event.target.classList.contains('remove-btn')) {
             event.target.closest('.dialogue-row').remove();
         }
     });
 
+    // --- Main Generate Logic ---
     generateBtn.addEventListener('click', async () => {
         generateBtn.disabled = true;
-        generateBtn.textContent = 'Gathering Data...';
+        generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
         statusArea.innerHTML = '';
 
-        // Collect dialogue data INCLUDING individual image placement
+        // 1. Gather dialogue data
         const dialogueRows = document.querySelectorAll('.dialogue-row');
         const dialoguePayload = [];
         dialogueRows.forEach(row => {
             const character = row.querySelector('.character-select').value;
-            const imagePlacement = row.querySelector('.image-placement-select').value;
+            const imagePlacement = row.querySelector('.placement-select').value;
             const text = row.querySelector('.dialogue-input').value;
             if (text.trim() !== '') {
                 dialoguePayload.push({ character, text, imagePlacement });
@@ -42,28 +55,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dialoguePayload.length === 0) {
             alert('Please enter at least one line of dialogue.');
             generateBtn.disabled = false;
-            generateBtn.textContent = '✨ Generate Your Viral Video ✨';
+            generateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate Video';
             return;
         }
 
-        // Collect global options
+        // 2. Gather global options
+        const selectedBackground = document.querySelector('.background-option.selected').dataset.video;
+        const subtitleStyle = document.getElementById('subtitle-style-select').value;
         const optionsPayload = {
-            subtitleStyle: subtitleStyleSelect.value
+            backgroundVideo: selectedBackground,
+            subtitleStyle: subtitleStyle
         };
-
-        // Create the final payload to send to the backend
-        const finalPayload = {
-            dialogue: dialoguePayload,
-            options: optionsPayload
-        };
-
-        generateBtn.textContent = 'Sending to Kitchen...';
         
+        // 3. Send everything to the backend
         try {
             const response = await fetch('/api/generate-video', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(finalPayload),
+                body: JSON.stringify({ dialogue: dialoguePayload, options: optionsPayload }),
             });
 
             if (!response.ok) throw new Error('Failed to queue job.');
@@ -71,9 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             const jobId = data.job_id;
             statusArea.textContent = `Job queued! Now processing...`;
-            generateBtn.textContent = 'Processing...';
             
-            // Polling logic remains the same and is robust
+            // 4. Poll for status
             const intervalId = setInterval(async () => {
                 const statusResponse = await fetch(`/api/job-status/${jobId}`);
                 if (!statusResponse.ok) return;
@@ -84,25 +92,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (statusData.status === 'finished') {
                     clearInterval(intervalId);
                     generateBtn.disabled = false;
-                    generateBtn.textContent = '✨ Generate Your Viral Video ✨';
+                    generateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate Video';
                     statusArea.innerHTML = `
-                        <p style="font-size: 1.2rem;">Video is ready!</p>
-                        <a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer" download="made_with_makeaclip.mp4" 
-                           style="display: inline-block; padding: 10px 20px; background-color: var(--button-secondary); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                            ⬇️ Download Video
+                        <p>Video is ready!</p>
+                        <a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); font-weight: 600;">
+                            Click here to Download Your Clip
                         </a>`;
                 } else if (statusData.status === 'failed') {
                     clearInterval(intervalId);
                     generateBtn.disabled = false;
-                    generateBtn.textContent = '✨ Generate Your Viral Video ✨';
-                    statusArea.textContent = `Job failed. The AI might be tired. Please check the logs or try again.`;
+                    generateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate Video';
+                    statusArea.textContent = `Job failed. Please check the worker logs on Render.`;
                 }
             }, 5000);
 
         } catch (error) {
             statusArea.textContent = 'An error occurred. Please try again.';
             generateBtn.disabled = false;
-            generateBtn.textContent = '✨ Generate Your Viral Video ✨';
+            generateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate Video';
         }
     });
 });
