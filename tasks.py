@@ -12,8 +12,13 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 # --- Configuration ---
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = { "peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq" }
-BACKGROUND_VIDEO_PATH = "static/background_minecraft.mp4"
 CHARACTER_IMAGE_PATHS = { "peter": "static/peter.png", "brian": "static/brian.png" }
+
+# NEW: Dictionary for background videos
+BACKGROUND_VIDEOS = {
+    "minecraft": "static/background_minecraft.mp4",
+    "csgo_surf": "static/background_csgo.mp4" # Make sure you add this file
+}
 
 cloudinary.config(
   cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"),
@@ -35,12 +40,15 @@ def generate_audio_elevenlabs(text, voice_id, filename):
         print(error_details)
         return False, error_details
 
-# Function signature updated to accept both arguments
 def create_video_task(dialogue_data: list, options: dict):
     dialogue_clips = []
     temp_files = []
 
+    # Get options from the payload
     subtitle_style = options.get("subtitleStyle", "standard")
+    background_key = options.get("backgroundVideo", "minecraft")
+    background_video_path = BACKGROUND_VIDEOS.get(background_key, BACKGROUND_VIDEOS["minecraft"])
+
 
     subtitle_styles = {
         "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
@@ -53,7 +61,6 @@ def create_video_task(dialogue_data: list, options: dict):
         for i, line_data in enumerate(dialogue_data):
             character = line_data.get("character")
             text = line_data.get("text")
-            # Get individual placement for this line
             image_placement = line_data.get("imagePlacement", "center") 
             
             if not all([character, text, character in VOICE_IDS]): continue
@@ -64,18 +71,17 @@ def create_video_task(dialogue_data: list, options: dict):
             if not success: raise Exception(error_message)
             
             audio_clip = AudioFileClip(audio_filename).audio_normalize()
-            # Store the individual placement with the clip data
             dialogue_clips.append({"character": character, "text": text, "audio": audio_clip, "imagePlacement": image_placement})
 
         if not dialogue_clips: raise Exception("No valid dialogue to process.")
 
         final_audio = concatenate_audioclips([d["audio"] for d in dialogue_clips])
-        background_clip = VideoFileClip(BACKGROUND_VIDEO_PATH).subclip(0, final_audio.duration).set_audio(final_audio)
+        # Use the selected background video path
+        background_clip = VideoFileClip(background_video_path).subclip(0, final_audio.duration).set_audio(final_audio)
         
         video_clips_to_compose = [background_clip]
         current_time = 0
         for clip_data in dialogue_clips:
-            # Use the stored individual placement for this clip
             img_clip = (ImageClip(CHARACTER_IMAGE_PATHS[clip_data["character"]])
                         .set_duration(clip_data["audio"].duration)
                         .set_start(current_time)
