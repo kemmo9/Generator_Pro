@@ -14,10 +14,12 @@ ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = { "peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq" }
 CHARACTER_IMAGE_PATHS = { "peter": "static/peter.png", "brian": "static/brian.png" }
 
-# NEW: Dictionary for background videos
+# NEW: Expanded dictionary for background videos
 BACKGROUND_VIDEOS = {
-    "minecraft": "static/background_minecraft.mp4",
-    "csgo_surf": "static/background_csgo.mp4" # Make sure you add this file
+    "minecraft_parkour1": "static/background_minecraft.mp4",
+    "minecraft_parkour2": "static/background_minecraft2.mp4",
+    "subway_surfers1": "static/background_subway1.mp4",
+    "subway_surfers2": "static/background_subway2.mp4"
 }
 
 cloudinary.config(
@@ -27,28 +29,21 @@ cloudinary.config(
   secure = True
 )
 
-def generate_audio_elevenlabs(text, voice_id, filename):
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    headers = {"Accept": "audio/mpeg", "Content-Type": "application/json", "xi-api-key": ELEVENLABS_API_KEY}
-    data = {"text": text, "model_id": "eleven_monolingual_v1", "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}}
-    response = requests.post(url, json=data, headers=headers)
-    if response.status_code == 200:
-        with open(filename, "wb") as f: f.write(response.content)
-        return True, None
-    else:
-        error_details = f"ElevenLabs API Error - Status: {response.status_code}, Response: {response.text}"
-        print(error_details)
-        return False, error_details
+# ... (the rest of your tasks.py file remains exactly the same) ...
 
+# The generate_audio_elevenlabs function is unchanged
+
+# The create_video_task function is mostly unchanged, but will now use the new keys
 def create_video_task(dialogue_data: list, options: dict):
     dialogue_clips = []
     temp_files = []
 
     # Get options from the payload
     subtitle_style = options.get("subtitleStyle", "standard")
-    background_key = options.get("backgroundVideo", "minecraft")
-    background_video_path = BACKGROUND_VIDEOS.get(background_key, BACKGROUND_VIDEOS["minecraft"])
-
+    background_key = options.get("backgroundVideo", "minecraft_parkour1") # Default to the first one
+    
+    # Use the selected background video key to get the file path
+    background_video_path = BACKGROUND_VIDEOS.get(background_key, BACKGROUND_VIDEOS["minecraft_parkour1"])
 
     subtitle_styles = {
         "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
@@ -58,6 +53,9 @@ def create_video_task(dialogue_data: list, options: dict):
     selected_style = subtitle_styles.get(subtitle_style, subtitle_styles["standard"])
 
     try:
+        # ... the rest of the function (audio generation, video composition) is identical to your last version ...
+        # This part does not need to change at all.
+
         for i, line_data in enumerate(dialogue_data):
             character = line_data.get("character")
             text = line_data.get("text")
@@ -76,7 +74,6 @@ def create_video_task(dialogue_data: list, options: dict):
         if not dialogue_clips: raise Exception("No valid dialogue to process.")
 
         final_audio = concatenate_audioclips([d["audio"] for d in dialogue_clips])
-        # Use the selected background video path
         background_clip = VideoFileClip(background_video_path).subclip(0, final_audio.duration).set_audio(final_audio)
         
         video_clips_to_compose = [background_clip]
