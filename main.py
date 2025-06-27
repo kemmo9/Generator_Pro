@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from rq import Queue
-from typing import Dict
+from typing import Dict, List
 
 # --- Configuration ---
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -24,16 +24,11 @@ async def read_root(request: Request):
 
 @app.post("/api/generate-video")
 async def queue_video_task(payload: Dict = Body(...)):
-    # Extract both the dialogue data and the options
     dialogue_data = payload.get("dialogue", [])
-    options_data = payload.get("options", {}) # Default to empty dict
-    
+    options_data = payload.get("options", {})
     if not dialogue_data:
         raise HTTPException(status_code=400, detail="Dialogue data is empty.")
-    
-    # Enqueue the job with both arguments
     job = q.enqueue('tasks.create_video_task', dialogue_data, options_data, job_timeout='10m', result_ttl=3600)
-    
     return JSONResponse({"job_id": job.id})
 
 @app.get("/api/job-status/{job_id}")
@@ -42,11 +37,20 @@ async def get_job_status(job_id: str):
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found.")
     
-    response = {"job_id": job.id, "status": job.get_status(), "result": None}
+    # This is the updated response structure
+    response = {
+        "job_id": job.id,
+        "status": job.get_status(),
+        "progress": job.meta.get('progress', 'Waiting in queue...'), # Get progress message
+        "result": None
+    }
     
     if job.is_finished:
         response["result"] = job.result
-    
+        response["progress"] = "Finished!"
+    elif job.is_failed:
+        response["progress"] = "Job Failed"
+
     return JSONResponse(response)
 
 @app.get("/health")
