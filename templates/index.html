@@ -3,37 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Make a Clip</title>
+    <title>Viral Editor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #1a1a2e;
-            --surface-color: #24243e;
-            --primary-color: #03dac6;
+            --bg-color: #121212; /* Darker background */
+            --surface-color: #1e1e1e; /* Card background */
+            --primary-color: #bb86fc; /* Purple accent */
+            --secondary-color: #03dac6; /* Teal accent */
             --text-color: #e0e0e0;
-            --text-secondary: #a0a0c0;
-            --border-color: #3a3a5a;
+            --text-secondary: #a0a0b0;
+            --border-color: #2c2c2c;
         }
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 2rem;
+            padding: 0;
+        }
+        
+        /* NEW: Full-width Header */
+        .app-header {
+            background-color: var(--surface-color);
+            padding: 0 2rem;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .header-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 70px;
+        }
+        .logo { font-size: 1.5rem; font-weight: 700; color: white; }
+        .logo i { color: var(--primary-color); }
+        .nav-menu { list-style: none; display: flex; gap: 2rem; margin: 0; padding: 0; }
+        .nav-menu a { color: var(--text-secondary); text-decoration: none; font-weight: 500; padding: 0.5rem 0; border-bottom: 2px solid transparent; transition: color 0.3s, border-color 0.3s; }
+        .nav-menu a:hover { color: white; }
+        .nav-menu a.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+
+        /* Main Content Container */
+        .main-content {
             display: flex;
             justify-content: center;
+            padding: 2rem;
         }
-        .container {
+        .editor-container {
             width: 100%;
             max-width: 800px;
             background-color: var(--surface-color);
             padding: 2rem 2.5rem;
             border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        .header { text-align: center; margin-bottom: 2.5rem; }
-        .header h1 { margin: 0 0 0.5rem 0; font-size: 2rem; }
+
         .step-title { font-weight: 600; margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
         
         .selector-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
@@ -50,16 +76,14 @@
         .option-box:hover { transform: scale(1.05); }
         .option-box.selected { border-color: var(--primary-color); }
         .option-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
-        .option-box .label { font-weight: 500; margin-top: 0.75rem; }
+        .option-box .label { font-weight: 500; margin-top: 0.75rem; font-size: 0.9rem; }
         .option-box i { font-size: 2rem; margin-bottom: 0.5rem; }
-
-        /* Subtitle Preview */
+        
         .subtitle-preview { padding: 1rem; font-size: 1.2rem; }
         #standard-preview { font-family: 'Arial-Bold', sans-serif; color: white; text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000; }
         #yellow-preview { font-family: 'Arial-Bold', sans-serif; color: yellow; text-shadow: -2.5px -2.5px 0 #000, 2.5px -2.5px 0 #000, -2.5px 2.5px 0 #000, 2.5px 2.5px 0 #000; }
         #meme-preview { font-family: 'Impact', sans-serif; color: white; text-shadow: -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000; letter-spacing: 1px; }
 
-        /* Dialogue Editor */
         select, input { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-size: 1rem; }
         .dialogue-box { border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;}
         .dialogue-row { display: grid; grid-template-columns: 1fr 1fr 3fr auto; gap: 1rem; align-items: center; }
@@ -68,7 +92,7 @@
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; }
         .controls button { padding: 0.8rem 1.5rem; font-size: 1.1rem; font-weight: 600; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.3s, transform 0.2s; }
         #add-dialogue-btn { background-color: #3a3a5a; }
-        #generate-btn { background: linear-gradient(90deg, #03dac6, #6200ee); }
+        #generate-btn { background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); color: #121212; }
         #add-dialogue-btn:hover, #generate-btn:hover { transform: translateY(-2px); }
         #generate-btn:disabled { background: #555; cursor: not-allowed; transform: none; }
         
@@ -76,47 +100,56 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header"><h1><i class="fa-solid fa-film"></i> Make a Clip</h1></div>
+    <header class="app-header">
+        <nav class="header-nav">
+            <div class="logo"><i class="fa-solid fa-bolt"></i> Clip-AI</div>
+            <ul class="nav-menu">
+                <li><a href="#">Text to Speech</a></li>
+                <li><a href="#" class="active">Viral Editor</a></li>
+                <li><a href="#">For You</a></li>
+            </ul>
+        </nav>
+    </header>
 
-        <!-- STEP 1: Template Selection -->
-        <p class="step-title"><span style="color:var(--primary-color)">Step 1:</span> Choose Your Template</p>
-        <div class="selector-grid" id="template-selector">
-            <div class="option-box selected" data-template="character"> <i class="fa-solid fa-comments"></i> <div class="label">Character Dialogue</div> </div>
-            <div class="option-box" data-template="reddit"> <i class="fa-brands fa-reddit-alien"></i> <div class="label">Reddit Stories</div> </div>
-            <div class="option-box" data-template="text"> <i class="fa-solid fa-mobile-screen-button"></i> <div class="label">Text Messages</div> </div>
-            <div class="option-box" data-template="meme"> <i class="fa-solid fa-face-laugh-squint"></i> <div class="label">Meme Templates</div> </div>
-        </div>
+    <main class="main-content">
+        <div class="editor-container">
+            <!-- STEP 1: Template Selection -->
+            <p class="step-title"><span style="color:var(--primary-color)">Step 1:</span> Choose Your Template</p>
+            <div class="selector-grid" id="template-selector">
+                <div class="option-box selected" data-template="character"> <i class="fa-solid fa-comments"></i> <div class="label">Character Dialogue</div> </div>
+                <div class="option-box" data-template="reddit"> <i class="fa-brands fa-reddit-alien"></i> <div class="label">Reddit Stories</div> </div>
+                <div class="option-box" data-template="text"> <i class="fa-solid fa-mobile-screen-button"></i> <div class="label">Text Messages</div> </div>
+                <div class="option-box" data-template="meme"> <i class="fa-solid fa-face-laugh-squint"></i> <div class="label">Meme Templates</div> </div>
+            </div>
 
-        <!-- STEP 2: Background Selection -->
-        <p class="step-title"><span style="color:var(--primary-color)">Step 2:</span> Choose Background Gameplay</p>
-        <div class="selector-grid" id="background-selector">
-            <div class="option-box selected" data-video="minecraft_parkour1"> <img src="https://i.imgur.com/k2oTAnK.png" alt="Minecraft Parkour"> <div class="label">Minecraft Parkour 1</div> </div>
-            <div class="option-box" data-video="minecraft_parkour2"> <img src="https://i.imgur.com/8m5kApA.png" alt="Minecraft Parkour 2"> <div class="label">Minecraft Parkour 2</div> </div>
-            <div class="option-box" data-video="subway_surfers1"> <img src="https://i.imgur.com/Sj82e5r.png" alt="Subway Surfers 1"> <div class="label">Subway Surfers 1</div> </div>
-            <div class="option-box" data-video="subway_surfers2"> <img src="https://i.imgur.com/Unyb3hN.png" alt="Subway Surfers 2"> <div class="label">Subway Surfers 2</div> </div>
-        </div>
+            <!-- STEP 2: Background Selection -->
+            <p class="step-title"><span style="color:var(--primary-color)">Step 2:</span> Choose Background Gameplay</p>
+            <div class="selector-grid" id="background-selector">
+                <div class="option-box selected" data-video="minecraft_parkour1"> <img src="https://i.imgur.com/k2oTAnK.png" alt="Minecraft Parkour"> <div class="label">Minecraft Parkour 1</div> </div>
+                <div class="option-box" data-video="minecraft_parkour2"> <img src="https://i.imgur.com/8m5kApA.png" alt="Minecraft Parkour 2"> <div class="label">Minecraft Parkour 2</div> </div>
+                <div class="option-box" data-video="subway_surfers1"> <img src="https://i.imgur.com/Sj82e5r.png" alt="Subway Surfers 1"> <div class="label">Subway Surfers 1</div> </div>
+                <div class="option-box" data-video="subway_surfers2"> <img src="https://i.imgur.com/Unyb3hN.png" alt="Subway Surfers 2"> <div class="label">Subway Surfers 2</div> </div>
+            </div>
 
-        <!-- STEP 3: Subtitle Style -->
-        <p class="step-title"><span style="color:var(--primary-color)">Step 3:</span> Choose Subtitle Style</p>
-        <div class="selector-grid" id="subtitle-selector">
-            <div class="option-box selected" data-style="standard"> <p id="standard-preview" class="subtitle-preview">Standard Style</p> </div>
-            <div class="option-box" data-style="yellow"> <p id="yellow-preview" class="subtitle-preview">Yellow Style</p> </div>
-            <div class="option-box" data-style="meme"> <p id="meme-preview" class="subtitle-preview">Meme Style</p> </div>
+            <!-- STEP 3: Subtitle Style -->
+            <p class="step-title"><span style="color:var(--primary-color)">Step 3:</span> Choose Subtitle Style</p>
+            <div class="selector-grid" id="subtitle-selector">
+                <div class="option-box selected" data-style="standard"> <p id="standard-preview" class="subtitle-preview">Standard Style</p> </div>
+                <div class="option-box" data-style="yellow"> <p id="yellow-preview" class="subtitle-preview">Yellow Style</p> </div>
+                <div class="option-box" data-style="meme"> <p id="meme-preview" class="subtitle-preview">Meme Style</p> </div>
+            </div>
+            
+            <!-- STEP 4: The Editor -->
+            <p class="step-title"><span style="color:var(--primary-color)">Step 4:</span> Write Your Script</p>
+            <div id="editor-container"><div id="dialogue-container" class="dialogue-box"></div></div>
+            
+            <div class="controls">
+                <button id="add-dialogue-btn"><i class="fa-solid fa-plus"></i> Add Dialogue Line</button>
+                <button id="generate-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Video</button>
+            </div>
+            <div class="status" id="status-area"></div>
         </div>
-        
-        <!-- STEP 4: The Editor -->
-        <p class="step-title"><span style="color:var(--primary-color)">Step 4:</span> Write Your Script</p>
-        <div id="editor-container">
-             <div id="dialogue-container" class="dialogue-box"></div>
-        </div>
-        
-        <div class="controls">
-            <button id="add-dialogue-btn"><i class="fa-solid fa-plus"></i> Add Dialogue Line</button>
-            <button id="generate-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Video</button>
-        </div>
-        <div class="status" id="status-area"></div>
-    </div>
+    </main>
 
     <template id="dialogue-row-template">
         <div class="dialogue-row">
