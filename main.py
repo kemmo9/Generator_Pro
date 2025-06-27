@@ -28,7 +28,9 @@ async def queue_video_task(payload: Dict = Body(...)):
     options_data = payload.get("options", {})
     if not dialogue_data:
         raise HTTPException(status_code=400, detail="Dialogue data is empty.")
-    job = q.enqueue('tasks.create_video_task', dialogue_data, options_data, job_timeout='10m', result_ttl=3600)
+    
+    job = q.enqueue('tasks.create_video_task', dialogue_data, options_data, job_timeout='15m', result_ttl=3600)
+    
     return JSONResponse({"job_id": job.id})
 
 @app.get("/api/job-status/{job_id}")
@@ -37,11 +39,10 @@ async def get_job_status(job_id: str):
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found.")
     
-    # This is the updated response structure
     response = {
         "job_id": job.id,
         "status": job.get_status(),
-        "progress": job.meta.get('progress', 'Waiting in queue...'), # Get progress message
+        "progress": job.meta.get('progress', 'Waiting in queue...'),
         "result": None
     }
     
