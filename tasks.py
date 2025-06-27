@@ -4,7 +4,7 @@ import cloudinary
 import cloudinary.uploader
 from moviepy.editor import *
 import PIL.Image
-from rq import get_current_job # Import the function to get the current job
+from rq import get_current_job
 
 # Compatibility fix
 if not hasattr(PIL.Image, 'ANTIALIAS'):
@@ -31,12 +31,11 @@ cloudinary.config(
 
 # --- Helper Functions ---
 def update_job_progress(message: str):
-    """Helper function to save progress to the job's metadata."""
     job = get_current_job()
     if job:
         job.meta['progress'] = message
         job.save_meta()
-        print(f"Job Progress: {message}") # Also print to worker logs for debugging
+        print(f"Job Progress: {message}")
 
 def download_file(url, local_filename):
     with requests.get(url, stream=True) as r:
@@ -62,16 +61,13 @@ def generate_audio_elevenlabs(text, voice_id, filename):
 def create_video_task(dialogue_data: list, options: dict):
     dialogue_clips = []
     temp_files = []
-    
     try:
         update_job_progress("Initializing...")
-
         subtitle_style = options.get("subtitleStyle", "standard")
         background_key = options.get("backgroundVideo", "minecraft_parkour1")
         background_video_url = BACKGROUND_VIDEO_URLS.get(background_key, BACKGROUND_VIDEO_URLS["minecraft_parkour1"])
         temp_background_path = "temp_background.mp4"
         temp_files.append(temp_background_path)
-        
         subtitle_styles = {
             "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
             "yellow": {"fontsize": 45, "color": "yellow", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
@@ -86,7 +82,7 @@ def create_video_task(dialogue_data: list, options: dict):
             update_job_progress(f"Generating audio {i+1}/{len(dialogue_data)}...")
             character = line_data.get("character")
             text = line_data.get("text")
-            image_placement = line_data.get("imagePlacement", "center") 
+            image_placement = line_data.get("imagePlacement", "center")
             if not all([character, text, character in VOICE_IDS]): continue
             audio_filename = f"temp_audio_{i}.mp3"
             temp_files.append(audio_filename)
@@ -105,22 +101,17 @@ def create_video_task(dialogue_data: list, options: dict):
         video_clips_to_compose = [background_clip]
         current_time = 0
         for clip_data in dialogue_clips:
-            img_clip = (ImageClip(CHARACTER_IMAGE_PATHS[clip_data["character"]])
-                        .set_duration(clip_data["audio"].duration)
-                        .set_start(current_time)
-                        .set_position(clip_data["imagePlacement"])
-                        .resize(height=300))
-            txt_clip = (TextClip(clip_data["text"], **selected_style, size=(background_clip.w * 0.8, None), method='caption')
-                        .set_duration(clip_data["audio"].duration)
-                        .set_start(current_time)
-                        .set_position(("center", 0.8), relative=True))
+            img_clip = (ImageClip(CHARACTER_IMAGE_PATHS[clip_data["character"]]).set_duration(clip_data["audio"].duration).set_start(current_time).set_position(clip_data["imagePlacement"]).resize(height=300))
+            txt_clip = (TextClip(clip_data["text"], **selected_style, size=(background_clip.w * 0.8, None), method='caption').set_duration(clip_data["audio"].duration).set_start(current_time).set_position(("center", 0.8), relative=True))
             video_clips_to_compose.extend([img_clip, txt_clip])
             current_time += clip_data["audio"].duration
 
         final_video = CompositeVideoClip(video_clips_to_compose)
         output_filename = "final_video_temp.mp4"
         temp_files.append(output_filename)
-        final_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", fps=24, logger=None)
+        
+        # THIS IS THE CRITICAL FIX FOR THE AbandonedJobError
+        final_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", fps=24, logger='bar')
         
         update_job_progress("Uploading to cloud storage...")
         upload_result = cloudinary.uploader.upload(output_filename, resource_type="video")
