@@ -6,8 +6,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- 1. AUTH0 CONFIGURATION ---
     // You must replace these placeholders with the values from your Auth0 Application settings.
     const auth0Config = {
-        domain: "dev-23lqnnqsp0tbnxch.us.auth0.com", // <-- REPLACE with your Auth0 Domain
-        clientId: "99E38sRywWn8n4uFwa5edAbR27F6NGzU", // <-- REPLACE with your Auth0 Client ID
+        domain: "dev-23iqnnqsp0tbnxch.us.auth0.com", // <-- REPLACE with your Auth0 Domain
+        clientId: "99E30sRywMn8h4uFwa5edAbR27F6NGzU", // <-- REPLACE with your Auth0 Client ID
         authorizationParams: {
             redirect_uri: window.location.origin // The page to return to after login
         }
