@@ -110,7 +110,7 @@
     </template>
     
     <script>
-        // Use window.onload which waits for ALL resources including the SDK script to be fully loaded.
+        // Use window.onload which is the most robust way to ensure all external scripts like the Auth0 SDK are loaded.
         window.onload = async () => {
             let auth0 = null;
             try {
@@ -135,7 +135,7 @@
             const generateBtn = document.getElementById('generate-btn');
             const generateBtnIcon = generateBtn.querySelector('.icon');
             const generateBtnText = generateBtn.querySelector('.text');
-
+            
             // --- AUTHENTICATION LOGIC ---
             loginButton.addEventListener('click', () => auth0.loginWithRedirect());
             logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
@@ -157,8 +157,10 @@
 
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has("code") && urlParams.has("state")) {
-                await auth0.handleRedirectCallback();
-                window.history.replaceState({}, document.title, "/");
+                try {
+                    await auth0.handleRedirectCallback();
+                    window.history.replaceState({}, document.title, "/");
+                } catch(e) { console.error("Error handling redirect callback:", e); }
             }
             await handleAuthState();
 
@@ -260,7 +262,7 @@
                     }
                 }
             });
-        });
+        };
     </script>
 </body>
 </html>
