@@ -1,60 +1,48 @@
-// A global variable to hold the Auth0 client instance
 let auth0 = null;
 
-// Configuration for Auth0
 const auth0Config = {
     domain: "dev-23iqnnqsp0tbnxch.us.auth0.com", // Your CORRECTED domain
-    clientId: "99E38sRywWn8n4uFwa5edAbR27F6NGzU", // Your Client ID
+    clientId: "99E30sRywMn8h4uFwa5edAbR27F6NGzU", // Your Client ID
     authorizationParams: {
         redirect_uri: window.location.origin
     }
 };
 
-/**
- * The main function to initialize and configure the application.
- * This will only be called after the Auth0 client is ready.
- */
-const configureApp = async () => {
-    // UI Elements
-    const loginButton = document.getElementById('btn-login');
-    const logoutButton = document.getElementById('btn-logout');
-    
-    // Auth Event Listeners
-    loginButton.addEventListener('click', () => auth0.loginWithRedirect());
-    logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
-
-    // Handle authentication state
+const updateUI = async () => {
     const isAuthenticated = await auth0.isAuthenticated();
-    if (isAuthenticated) {
-        loginButton.style.display = 'none';
-        logoutButton.style.display = 'block';
-    } else {
-        loginButton.style.display = 'block';
-        logoutButton.style.display = 'none';
+    document.getElementById('btn-login').style.display = isAuthenticated ? 'none' : 'block';
+    document.getElementById('btn-logout').style.display = isAuthenticated ? 'block' : 'none';
+};
+
+window.onload = async () => {
+    try {
+        auth0 = await createAuth0Client(auth0Config);
+    } catch (e) {
+        console.error("Auth0 SDK failed to initialize:", e);
+        return alert("Error: Authentication service failed to load.");
     }
 
-    // This is the logic that was missing before. We must handle the redirect
-    // *before* we try to attach events to the main editor.
+    // Handle the post-login redirect
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("code") && urlParams.has("state")) {
         await auth0.handleRedirectCallback();
         window.history.replaceState({}, document.title, "/");
-        // After handling the redirect, we must re-check the auth state
-        // to correctly show the logout button.
-        await configureApp(); 
-        return; // Stop execution to prevent duplicate event listeners
     }
+    
+    await updateUI();
 
-    // --- Main Editor Logic (only runs if not handling a redirect) ---
+    document.getElementById('btn-login').addEventListener('click', () => auth0.loginWithRedirect());
+    document.getElementById('btn-logout').addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
+
+    // --- Editor Logic ---
     const generateBtn = document.getElementById('generate-btn');
     generateBtn.addEventListener('click', async () => {
         const isAuthenticated = await auth0.isAuthenticated();
         if (!isAuthenticated) {
             alert("Please log in to generate a video.");
-            auth0.loginWithRedirect();
-            return;
+            return auth0.loginWithRedirect();
         }
-
+        
         const generateBtnIcon = generateBtn.querySelector('.icon');
         const generateBtnText = generateBtn.querySelector('.text');
         
@@ -62,7 +50,7 @@ const configureApp = async () => {
         generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
         generateBtnText.textContent = 'Generating...';
         const statusArea = document.getElementById('status-area');
-        statusArea.innerHTML = '';
+        statusArea.innerHTML = 'Starting...';
 
         const dialoguePayload = Array.from(document.querySelectorAll('.dialogue-row')).map(row => ({
             character: row.querySelector('.character-select').value,
@@ -76,7 +64,6 @@ const configureApp = async () => {
             generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
             generateBtnText.textContent = 'Generate Video'; return;
         }
-
         const optionsPayload = {
             template: document.querySelector('#template-selector .option-box.selected').dataset.template,
             backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video,
@@ -116,14 +103,10 @@ const configureApp = async () => {
             }, 3000);
         } catch (error) {
             console.error("Generate error:", error);
-            if (error.error === 'login_required' || error.error === 'consent_required') {
-                auth0.loginWithRedirect();
-            } else {
-                statusArea.textContent = 'An error occurred. Please try again.';
-                generateBtn.disabled = false;
-                generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
-                generateBtnText.textContent = 'Generate Video';
-            }
+            statusArea.textContent = 'An error occurred. Please try again.';
+            generateBtn.disabled = false;
+            generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+            generateBtnText.textContent = 'Generate Video';
         }
     });
 
@@ -148,14 +131,4 @@ const configureApp = async () => {
     dialogueContainer.addEventListener('click', (event) => {
         if (event.target.classList.contains('remove-btn')) event.target.closest('.dialogue-row').remove();
     });
-};
-
-// This is the most reliable way to start the app.
-// It waits for the window to load, then initializes the Auth0 client.
-window.onload = async () => {
-    try {
-        await configureClient();
-    } catch(e) {
-        console.error("Initialization failed", e);
-    }
 };
