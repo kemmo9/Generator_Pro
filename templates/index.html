@@ -6,9 +6,8 @@
     <title>Make a Clip</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Auth0 SDK is loaded first in the head with the 'defer' attribute -->
-    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js" defer></script>
-    
+    <!-- Auth0 SDK is loaded first -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
     <style>
         :root {
             --bg-color: #121212; --surface-color: #1e1e1e; --primary-color: #bb86fc;
@@ -16,8 +15,6 @@
         }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 2rem; }
         .app-title-container { text-align: center; margin-bottom: 2.5rem; }
-        .app-title-container h1 { font-size: 2.5rem; font-weight: 700; margin: 0 0 1rem 0; }
-        .app-title-container h1 i { color: var(--primary-color); }
         .header-container { display: flex; justify-content: center; align-items: center; position: relative; padding: 1rem 0; }
         .auth-buttons { position: absolute; right: 0; }
         .nav-button { background-color: var(--primary-color); color: #121212; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background-color 0.3s; }
@@ -70,7 +67,7 @@
         </ul>
     </div>
     
-    <main class="editor-container" style="display:none;">
+    <main class="editor-container"> <!-- Editor is now visible by default -->
         <p class="step-title"><span style="color:var(--primary-color)">Step 1:</span> Choose Your Template</p>
         <div class="selector-grid" id="template-selector">
             <div class="option-box selected" data-template="character"><i class="fa-solid fa-comments"></i><div class="label">Character Dialogue</div></div>
@@ -110,88 +107,82 @@
     </template>
     
     <script>
-        // THIS IS THE CRITICAL FIX: We wrap everything in a function and call it
-        // only when the DOM is ready. This prevents race conditions.
-        const initializeApp = async () => {
+        // Use the most reliable event to ensure all scripts are ready.
+        window.addEventListener('load', () => {
             let auth0 = null;
-            try {
-                // The Auth0 SDK script has finished loading, so createAuth0Client now exists.
-                auth0 = await createAuth0Client({
-                    domain: "dev-23lqnnqsp0tbnxch.us.auth0.com", // YOUR REAL AUTH0 DOMAIN
-                    clientId: "99E38sRywWn8n4uFwa5edAbR27F6NGzU", // YOUR REAL AUTH0 CLIENT ID
-                    authorizationParams: {
-                        redirect_uri: window.location.origin
-                    }
-                });
-            } catch (e) {
-                console.error("Auth0 SDK could not be initialized:", e);
-                alert("Authentication service is temporarily unavailable. Please try again later.");
-                return;
-            }
 
-            const loginButton = document.getElementById('btn-login');
-            const logoutButton = document.getElementById('btn-logout');
-            const editorContainer = document.querySelector('.editor-container');
-            const generateBtn = document.getElementById('generate-btn');
-            const generateBtnIcon = generateBtn.querySelector('.icon');
-            const generateBtnText = generateBtn.querySelector('.text');
+            // Define the configuration with the CORRECT domain.
+            const auth0Config = {
+                domain: "dev-23iqnnqsp0tbnxch.us.auth0.com", // YOUR CORRECTED DOMAIN
+                clientId: "99E38sRywWn8n4uFwa5edAbR27F6NGzU", // YOUR CLIENT ID
+                authorizationParams: {
+                    redirect_uri: window.location.origin
+                }
+            };
             
-            loginButton.addEventListener('click', () => auth0.loginWithRedirect());
-            logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
+            // This function initializes Auth0 and updates the UI based on login state.
+            const configureClient = async () => {
+                try {
+                    // This is the function that was previously failing.
+                    auth0 = await createAuth0Client(auth0Config);
+                } catch (e) {
+                    console.error("Auth0 SDK failed to initialize:", e);
+                    alert("Authentication service failed to load. Please refresh and try again.");
+                    return;
+                }
 
-            const handleAuthState = async () => {
                 const isAuthenticated = await auth0.isAuthenticated();
+                const loginButton = document.getElementById('btn-login');
+                const logoutButton = document.getElementById('btn-logout');
+
                 if (isAuthenticated) {
                     loginButton.style.display = 'none';
                     logoutButton.style.display = 'block';
-                    editorContainer.style.display = 'block';
                 } else {
                     loginButton.style.display = 'block';
                     logoutButton.style.display = 'none';
-                    editorContainer.style.display = 'none';
+                }
+
+                loginButton.addEventListener('click', () => auth0.loginWithRedirect());
+                logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
+
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has("code") && urlParams.has("state")) {
+                    await auth0.handleRedirectCallback();
+                    window.history.replaceState({}, document.title, "/");
+                    // Re-check authentication state after handling redirect
+                    await configureClient(); 
                 }
             };
 
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has("code") && urlParams.has("state")) {
-                await auth0.handleRedirectCallback();
-                window.history.replaceState({}, document.title, "/");
-            }
-            await handleAuthState();
+            // Call the main configuration function when the window loads.
+            configureClient();
+
+            // --- ALL EDITOR LOGIC IS SEPARATE AND SAFE ---
+            const generateBtn = document.getElementById('generate-btn');
             
-            const dialogueContainer = document.getElementById('dialogue-container');
-            const addDialogueBtn = document.getElementById('add-dialogue-btn');
-            const statusArea = document.getElementById('status-area');
-            const rowTemplate = document.getElementById('dialogue-row-template');
-
-            const setupSelector = (selectorId) => {
-                const selector = document.getElementById(selectorId);
-                selector.addEventListener('click', (event) => {
-                    const selectedOption = event.target.closest('.option-box');
-                    if (!selectedOption) return;
-                    selector.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
-                    selectedOption.classList.add('selected');
-});
-            };
-            setupSelector('template-selector');
-            setupSelector('background-selector');
-            setupSelector('subtitle-selector');
-
-            const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
-            addRow(); addRow();
-            addDialogueBtn.addEventListener('click', addRow);
-            dialogueContainer.addEventListener('click', (event) => {
-                if (event.target.classList.contains('remove-btn')) event.target.closest('.dialogue-row').remove();
-            });
-
             generateBtn.addEventListener('click', async () => {
+                const isAuthenticated = await auth0.isAuthenticated();
+                if (!isAuthenticated) {
+                    // This is the new feature: prompt to login when they try to generate.
+                    alert("Please log in to generate a video.");
+                    auth0.loginWithRedirect();
+                    return;
+                }
+                
+                // ... The rest of your existing, working generate button logic ...
+                const generateBtnIcon = generateBtn.querySelector('.icon');
+                const generateBtnText = generateBtn.querySelector('.text');
+                
                 if (document.querySelector('#template-selector .option-box.selected').dataset.template !== 'character') {
                     alert('This template is coming soon!'); return;
                 }
+
                 generateBtn.disabled = true;
                 generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
                 generateBtnText.textContent = 'Generating...';
                 statusArea.innerHTML = '';
+
                 const dialoguePayload = Array.from(document.querySelectorAll('.dialogue-row')).map(row => ({
                     character: row.querySelector('.character-select').value,
                     imagePlacement: row.querySelector('.placement-select').value,
@@ -204,6 +195,7 @@
                     generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
                     generateBtnText.textContent = 'Generate Video'; return;
                 }
+
                 const optionsPayload = {
                     template: document.querySelector('#template-selector .option-box.selected').dataset.template,
                     backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video,
@@ -221,6 +213,7 @@
                     const data = await response.json();
                     const jobId = data.job_id;
                     statusArea.textContent = `Job queued! Polling for status...`;
+                    
                     const intervalId = setInterval(async () => {
                         try {
                             const statusResponse = await fetch(`/api/job-status/${jobId}`);
@@ -252,10 +245,30 @@
                     }
                 }
             });
-        };
-        
-        // This is the most reliable way to start the app.
-        document.addEventListener('DOMContentLoaded', initializeApp);
+
+            // Initialize the rest of the non-auth UI
+            const dialogueContainer = document.getElementById('dialogue-container');
+            const addDialogueBtn = document.getElementById('add-dialogue-btn');
+            const rowTemplate = document.getElementById('dialogue-row-template');
+            const setupSelector = (selectorId) => {
+                const selector = document.getElementById(selectorId);
+                selector.addEventListener('click', (event) => {
+                    const selectedOption = event.target.closest('.option-box');
+                    if (!selectedOption) return;
+                    selector.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
+                    selectedOption.classList.add('selected');
+                });
+            };
+            setupSelector('template-selector');
+            setupSelector('background-selector');
+            setupSelector('subtitle-selector');
+            const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
+            addRow(); addRow();
+            addDialogueBtn.addEventListener('click', addRow);
+            dialogueContainer.addEventListener('click', (event) => {
+                if (event.target.classList.contains('remove-btn')) event.target.closest('.dialogue-row').remove();
+            });
+        });
     </script>
 </body>
 </html>
