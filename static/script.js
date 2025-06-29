@@ -8,37 +8,38 @@ const auth0Config = {
     }
 };
 
-const updateUI = async () => {
-    const isAuthenticated = await auth0.isAuthenticated();
-    document.getElementById('btn-login').style.display = isAuthenticated ? 'none' : 'block';
-    document.getElementById('btn-logout').style.display = isAuthenticated ? 'block' : 'none';
-};
+/**
+ * This is the main application function. It will only be called
+ * after the Auth0 client has been confirmed to exist.
+ */
+const runApp = async () => {
+    // --- AUTHENTICATION LOGIC ---
+    const loginButton = document.getElementById('btn-login');
+    const logoutButton = document.getElementById('btn-logout');
 
-window.onload = async () => {
-    try {
-        auth0 = await createAuth0Client(auth0Config);
-    } catch (e) {
-        console.error("Auth0 SDK failed to initialize:", e);
-        return alert("Error: Authentication service failed to load.");
-    }
+    loginButton.addEventListener('click', () => auth0.loginWithRedirect());
+    logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
 
-    // Handle the post-login redirect
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("code") && urlParams.has("state")) {
         await auth0.handleRedirectCallback();
         window.history.replaceState({}, document.title, "/");
     }
-    
-    await updateUI();
 
-    document.getElementById('btn-login').addEventListener('click', () => auth0.loginWithRedirect());
-    document.getElementById('btn-logout').addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
+    const isAuthenticated = await auth0.isAuthenticated();
+    if (isAuthenticated) {
+        loginButton.style.display = 'none';
+        logoutButton.style.display = 'block';
+    } else {
+        loginButton.style.display = 'block';
+        logoutButton.style.display = 'none';
+    }
 
-    // --- Editor Logic ---
+    // --- EDITOR LOGIC ---
     const generateBtn = document.getElementById('generate-btn');
     generateBtn.addEventListener('click', async () => {
-        const isAuthenticated = await auth0.isAuthenticated();
-        if (!isAuthenticated) {
+        const isAuth = await auth0.isAuthenticated();
+        if (!isAuth) {
             alert("Please log in to generate a video.");
             return auth0.loginWithRedirect();
         }
@@ -132,3 +133,27 @@ window.onload = async () => {
         if (event.target.classList.contains('remove-btn')) event.target.closest('.dialogue-row').remove();
     });
 };
+
+/**
+ * This is the entry point. It waits for the Auth0 SDK to be ready.
+ */
+window.addEventListener('load', async () => {
+    try {
+        // Attempt to create the Auth0 client. This will fail until the SDK is loaded.
+        auth0 = await createAuth0Client(auth0Config);
+        // If it succeeds, run the main app logic.
+        runApp();
+    } catch (e) {
+        // If it fails, it's likely because the SDK isn't ready. We will wait and retry.
+        console.log("Auth0 SDK not ready yet, will retry...");
+        const startupInterval = setInterval(async () => {
+            try {
+                auth0 = await createAuth0Client(auth0Config);
+                clearInterval(startupInterval); // Stop polling
+                runApp(); // Run the app
+            } catch (err) {
+                // Still not ready, do nothing and wait for the next interval.
+            }
+        }, 500); // Check every 500ms
+    }
+});
