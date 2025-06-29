@@ -79,10 +79,10 @@
         </div>
         <p class="step-title"><span style="color:var(--primary-color)">Step 2:</span> Choose Background Gameplay</p>
         <div class="selector-grid" id="background-selector">
-            <div class="option-box selected" data-video="minecraft_parkour1"><img src="https://i.ibb.co/b3wJ7p0/minecraft1.png" alt="Minecraft Parkour"><div class="label">Minecraft Parkour 1</div></div>
-            <div class="option-box" data-video="minecraft_parkour2"><img src="https://i.ibb.co/3kM2v7M/minecraft2.png" alt="Minecraft Parkour 2"><div class="label">Minecraft Parkour 2</div></div>
-            <div class="option-box" data-video="subway_surfers1"><img src="https://i.ibb.co/Fbfg9Br/subway1.png" alt="Subway Surfers 1"><div class="label">Subway Surfers 1</div></div>
-            <div class="option-box" data-video="subway_surfers2"><img src="https://i.ibb.co/6rWdYVn/subway2.png" alt="Subway Surfers 2"><div class="label">Subway Surfers 2</div></div>
+            <div class="option-box selected" data-video="minecraft_parkour1"><img src="/static/minecraft1.png" alt="Minecraft Parkour"><div class="label">Minecraft Parkour 1</div></div>
+            <div class="option-box" data-video="minecraft_parkour2"><img src="/static/minecraft2.png" alt="Minecraft Parkour 2"><div class="label">Minecraft Parkour 2</div></div>
+            <div class="option-box" data-video="subway_surfers1"><img src="/static/subwaysurfer1.png" alt="Subway Surfers 1"><div class="label">Subway Surfers 1</div></div>
+            <div class="option-box" data-video="subway_surfers2"><img src="/static/subwaysurfer2.png" alt="Subway Surfers 2"><div class="label">Subway Surfers 2</div></div>
         </div>
         <p class="step-title"><span style="color:var(--primary-color)">Step 3:</span> Choose Subtitle Style</p>
         <div class="selector-grid" id="subtitle-selector">
@@ -120,34 +120,39 @@
             }
         };
 
-        const updateUI = async () => {
-            const isAuthenticated = await auth0.isAuthenticated();
-            document.getElementById('btn-login').style.display = isAuthenticated ? 'none' : 'block';
-            document.getElementById('btn-logout').style.display = isAuthenticated ? 'block' : 'none';
-        };
+        const configureClient = async () => {
+            auth0 = await createAuth0Client(auth0Config);
 
-        window.onload = async () => {
-            try {
-                auth0 = await createAuth0Client(auth0Config);
-            } catch (e) {
-                console.error("Auth0 SDK failed to initialize:", e);
-                alert("Authentication service failed to load. Please refresh the page.");
-                return;
+            const loginButton = document.getElementById('btn-login');
+            const logoutButton = document.getElementById('btn-logout');
+
+            loginButton.addEventListener('click', () => auth0.loginWithRedirect());
+            logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
+
+            const isAuthenticated = await auth0.isAuthenticated();
+            if (isAuthenticated) {
+                loginButton.style.display = 'none';
+                logoutButton.style.display = 'block';
+            } else {
+                loginButton.style.display = 'block';
+                logoutButton.style.display = 'none';
             }
 
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has("code") && urlParams.has("state")) {
                 await auth0.handleRedirectCallback();
                 window.history.replaceState({}, document.title, "/");
+                // Re-run this function to update the UI after the redirect is handled.
+                await configureClient(); 
             }
-            
-            await updateUI();
+        };
 
-            document.getElementById('btn-login').addEventListener('click', () => auth0.loginWithRedirect());
-            document.getElementById('btn-logout').addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
-
+        const initializeApp = () => {
+            // This function sets up the non-auth parts of the app.
             const generateBtn = document.getElementById('generate-btn');
+            
             generateBtn.addEventListener('click', async () => {
+                // Check for authentication *at the moment of action*.
                 const isAuthenticated = await auth0.isAuthenticated();
                 if (!isAuthenticated) {
                     alert("Please log in to generate a video.");
@@ -248,6 +253,13 @@
                 if (event.target.classList.contains('remove-btn')) event.target.closest('.dialogue-row').remove();
             });
         };
+
+        // This is the new, robust entry point.
+        // It waits for the entire page to load, then initializes the app.
+        window.addEventListener('load', async () => {
+            await configureClient();
+            initializeApp();
+        });
     </script>
 </body>
 </html>
