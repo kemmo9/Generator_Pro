@@ -1,4 +1,95 @@
-document.addEventListener('DOMContentLoaded', () => {
+// static/script.js
+
+// This function will run once the main HTML document is fully loaded.
+document.addEventListener('DOMContentLoaded', async () => {
+
+    // --- 1. AUTH0 CONFIGURATION ---
+    // You must replace these placeholders with the values from your Auth0 Application settings.
+    const auth0Config = {
+        domain: "dev-23lqnnqsp0tbnxch.us.auth0.com", // <-- REPLACE with your Auth0 Domain
+        clientId: "99E38sRywWn8n4uFwa5edAbR27F6NGzU", // <-- REPLACE with your Auth0 Client ID
+        authorizationParams: {
+            redirect_uri: window.location.origin // The page to return to after login
+        }
+    };
+
+    let auth0 = null;
+    try {
+        auth0 = await auth0spa.createAuth0Client(auth0Config);
+    } catch (e) {
+        console.error("Auth0 SDK failed to initialize:", e);
+        return; // Stop if Auth0 fails
+    }
+
+    // --- 2. UI ELEMENTS ---
+    const loginButton = document.getElementById('btn-login');
+    const logoutButton = document.getElementById('btn-logout');
+    const editorContainer = document.querySelector('.editor-container'); // The main editor area
+
+    // --- 3. EVENT LISTENERS ---
+    loginButton.addEventListener('click', async () => {
+        // This redirects the user to the Auth0 Universal Login page.
+        // Auth0 will handle showing the Google button.
+        await auth0.loginWithRedirect(); 
+    });
+
+    logoutButton.addEventListener('click', () => {
+        // This logs the user out and returns them to your main page.
+        auth0.logout({
+            logoutParams: {
+                returnTo: window.location.origin
+            }
+        });
+    });
+
+    // --- 4. AUTHENTICATION STATE HANDLING ---
+    const handleAuthState = async () => {
+        const isAuthenticated = await auth0.isAuthenticated();
+        
+        if (isAuthenticated) {
+            // If the user is logged in:
+            loginButton.style.display = 'none';
+            logoutButton.style.display = 'block';
+            editorContainer.style.display = 'block'; // Show the editor
+
+            // You can get user profile information like this.
+            const user = await auth0.getUser();
+            console.log('Logged in as:', user);
+            
+            // This is where you would get the secure token to send to your backend API
+            // const accessToken = await auth0.getTokenSilently();
+            // Your fetch requests would include this token in the header.
+
+        } else {
+            // If the user is NOT logged in:
+            loginButton.style.display = 'block';
+            logoutButton.style.display = 'none';
+            editorContainer.style.display = 'none'; // Hide the editor
+        }
+    };
+
+    // --- 5. PAGE LOAD LOGIC ---
+    // This part handles the redirect back from Auth0 after a successful login.
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("code") && urlParams.has("state")) {
+        try {
+            await auth0.handleRedirectCallback();
+            // Clean up the URL by removing the code and state parameters
+            window.history.replaceState({}, document.title, "/");
+        } catch(e) {
+            console.error("Error handling redirect callback:", e);
+        }
+    }
+    
+    // Finally, check the authentication state and update the UI accordingly.
+    await handleAuthState();
+    
+    // =================================================================================
+    // Your existing video generation editor logic goes here.
+    // NOTE: It is now wrapped inside the main function, so it only runs
+    // after the authentication check is complete.
+    // =================================================================================
+    
     const dialogueContainer = document.getElementById('dialogue-container');
     const addDialogueBtn = document.getElementById('add-dialogue-btn');
     const generateBtn = document.getElementById('generate-btn');
