@@ -6,8 +6,11 @@
     <title>Make a Clip</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Auth0 SDK is loaded first -->
     <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    
     <style>
+        /* All CSS is now inside the HTML file */
         :root {
             --bg-color: #121212; --surface-color: #1e1e1e; --primary-color: #bb86fc;
             --secondary-color: #03dac6; --text-color: #e0e0e0; --text-secondary: #a0a0b0; --border-color: #2c2c2c;
@@ -24,7 +27,7 @@
         .nav-menu a { color: var(--text-secondary); text-decoration: none; font-weight: 500; padding: 0.5rem; transition: color 0.3s; }
         .nav-menu a:hover { color: white; }
         .nav-menu a.active { color: var(--primary-color); font-weight: 600; }
-        .editor-container { width: 100%; max-width: 800px; margin: 0 auto; background-color: var(--surface-color); padding: 2rem 2.5rem; border-radius: 12px; }
+        .editor-container { width: 100%; max-w: 800px; margin: 0 auto; background-color: var(--surface-color); padding: 2rem 2.5rem; border-radius: 12px; }
         .step-title { font-weight: 600; margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
         .selector-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
         .option-box { border: 2px solid var(--border-color); border-radius: 8px; cursor: pointer; position: relative; transition: transform 0.2s, border-color 0.2s; background-color: var(--bg-color); padding: 1rem; text-align: center; }
@@ -67,6 +70,7 @@
             <li><a href="#">For You</a></li>
         </ul>
     </div>
+    
     <main class="editor-container" style="display:none;">
         <p class="step-title"><span style="color:var(--primary-color)">Step 1:</span> Choose Your Template</p>
         <div class="selector-grid" id="template-selector">
@@ -96,6 +100,7 @@
         </div>
         <div class="status" id="status-area"></div>
     </main>
+
     <template id="dialogue-row-template">
         <div class="dialogue-row">
             <select class="character-select"><option value="peter">Peter</option><option value="brian">Brian</option></select>
@@ -104,6 +109,163 @@
             <button class="remove-btn" title="Remove line">×</button>
         </div>
     </template>
-    <script src="/static/script.js"></script>
+    
+    <script>
+        // All JavaScript is now inside the HTML file
+        window.addEventListener('load', async () => {
+    
+            // --- 1. AUTH0 CONFIGURATION ---
+            const auth0Config = {
+                domain: "dev-23lqnnqsp0tbnxch.us.auth0.com", // YOUR REAL AUTH0 DOMAIN
+                clientId: "99E38sRywWn8n4uFwa5edAbR27F6NGzU", // YOUR REAL AUTH0 CLIENT ID
+                authorizationParams: {
+                    redirect_uri: window.location.origin
+                }
+            };
+
+            let auth0 = null;
+            try {
+                auth0 = await auth0spa.createAuth0Client(auth0Config);
+            } catch (e) {
+                console.error("Auth0 SDK failed to initialize:", e);
+                alert("Authentication service failed to load. Please refresh and try again.");
+                return;
+            }
+
+            // --- 2. UI ELEMENTS ---
+            const loginButton = document.getElementById('btn-login');
+            const logoutButton = document.getElementById('btn-logout');
+            const editorContainer = document.querySelector('.editor-container');
+
+            // --- 3. EVENT LISTENERS ---
+            loginButton.addEventListener('click', () => auth0.loginWithRedirect());
+            logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
+
+            // --- 4. AUTHENTICATION STATE HANDLING ---
+            const handleAuthState = async () => {
+                const isAuthenticated = await auth0.isAuthenticated();
+                if (isAuthenticated) {
+                    loginButton.style.display = 'none';
+                    logoutButton.style.display = 'block';
+                    editorContainer.style.display = 'block';
+                    const user = await auth0.getUser();
+                    console.log('Logged in as:', user);
+                } else {
+                    loginButton.style.display = 'block';
+                    logoutButton.style.display = 'none';
+                    editorContainer.style.display = 'none';
+                }
+            };
+
+            // --- 5. PAGE LOAD LOGIC ---
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has("code") && urlParams.has("state")) {
+                try {
+                    await auth0.handleRedirectCallback();
+                    window.history.replaceState({}, document.title, "/");
+                } catch(e) { console.error("Error handling redirect callback:", e); }
+            }
+            
+            await handleAuthState();
+            
+            // --- 6. The rest of your editor logic ---
+            const dialogueContainer = document.getElementById('dialogue-container');
+            const addDialogueBtn = document.getElementById('add-dialogue-btn');
+            const generateBtn = document.getElementById('generate-btn');
+            const statusArea = document.getElementById('status-area');
+            const rowTemplate = document.getElementById('dialogue-row-template');
+            const generateBtnIcon = generateBtn.querySelector('.icon');
+            const generateBtnText = generateBtn.querySelector('.text');
+
+            const setupSelector = (selectorId) => {
+                const selector = document.getElementById(selectorId);
+                selector.addEventListener('click', (event) => {
+                    const selectedOption = event.target.closest('.option-box');
+                    if (!selectedOption) return;
+                    selector.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
+                    selectedOption.classList.add('selected');
+                });
+            };
+            setupSelector('template-selector');
+            setupSelector('background-selector');
+            setupSelector('subtitle-selector');
+
+            const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
+            addRow(); addRow();
+            addDialogueBtn.addEventListener('click', addRow);
+            dialogueContainer.addEventListener('click', (event) => {
+                if (event.target.classList.contains('remove-btn')) {
+                    event.target.closest('.dialogue-row').remove();
+                }
+            });
+
+            generateBtn.addEventListener('click', async () => {
+                if (document.querySelector('#template-selector .option-box.selected').dataset.template !== 'character') {
+                    alert('This template is coming soon!'); return;
+                }
+
+                generateBtn.disabled = true;
+                generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
+                generateBtnText.textContent = 'Generating...';
+                statusArea.innerHTML = '';
+
+                const dialoguePayload = Array.from(document.querySelectorAll('.dialogue-row')).map(row => ({
+                    character: row.querySelector('.character-select').value,
+                    imagePlacement: row.querySelector('.placement-select').value,
+                    text: row.querySelector('.dialogue-input').value,
+                })).filter(line => line.text.trim() !== '');
+
+                if (dialoguePayload.length === 0) {
+                    alert('Please enter at least one line of dialogue.');
+                    generateBtn.disabled = false;
+                    generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                    generateBtnText.textContent = 'Generate Video'; return;
+                }
+
+                const optionsPayload = {
+                    template: document.querySelector('#template-selector .option-box.selected').dataset.template,
+                    backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video,
+                    subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style
+                };
+                
+                try {
+                    const response = await fetch('/api/generate-video', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ dialogue: dialoguePayload, options: optionsPayload }),
+                    });
+                    if (!response.ok) throw new Error('Failed to queue job.');
+                    const data = await response.json();
+                    const jobId = data.job_id;
+                    statusArea.textContent = `Job queued! Polling for status...`;
+                    
+                    const intervalId = setInterval(async () => {
+                        try {
+                            const statusResponse = await fetch(`/api/job-status/${jobId}`);
+                            if (!statusResponse.ok) return;
+                            const statusData = await statusResponse.json();
+                            statusArea.textContent = `Status: ${statusData.progress}`;
+                            if (statusData.status === 'finished' || statusData.status === 'failed') {
+                                clearInterval(intervalId);
+                                generateBtn.disabled = false;
+                                generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                                generateBtnText.textContent = 'Generate Video';
+                                if (statusData.status === 'finished') {
+                                    statusArea.innerHTML = `<p>Video is ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); font-weight: 600;">Click here to Download Your Clip</a>`;
+                                } else {
+                                    statusArea.textContent = `Job failed. Please check the worker logs on Render for details.`;
+                                }
+                            }
+                        } catch (pollError) { console.error("Polling error:", pollError); }
+                    }, 3000);
+                } catch (error) {
+                    statusArea.textContent = 'An error occurred. Please try again.';
+                    generateBtn.disabled = false;
+                    generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                    generateBtnText.textContent = 'Generate Video';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
