@@ -110,13 +110,11 @@
     </template>
     
     <script>
-        // THIS IS THE CRITICAL FIX: We use DOMContentLoaded which is more reliable.
-        document.addEventListener('DOMContentLoaded', async () => {
-    
+        // Use window.onload which waits for ALL resources including the SDK script to be fully loaded.
+        window.onload = async () => {
             let auth0 = null;
             try {
-                // This is the line that was failing. It will now work because this script
-                // runs after the Auth0 SDK script has loaded the 'createAuth0Client' function.
+                // This is the correct function name provided by the Auth0 SDK
                 auth0 = await createAuth0Client({
                     domain: "dev-23lqnnqsp0tbnxch.us.auth0.com", // YOUR REAL AUTH0 DOMAIN
                     clientId: "99E38sRywWn8n4uFwa5edAbR27F6NGzU", // YOUR REAL AUTH0 CLIENT ID
@@ -125,8 +123,8 @@
                     }
                 });
             } catch (e) {
-                console.error("Auth0 SDK failed to initialize:", e);
-                alert("Authentication service failed to load. Please refresh and try again.");
+                console.error("Auth0 SDK could not be initialized. Is the script tag correct?", e);
+                alert("Authentication service is temporarily unavailable. Please try again later.");
                 return;
             }
 
@@ -137,12 +135,11 @@
             const generateBtn = document.getElementById('generate-btn');
             const generateBtnIcon = generateBtn.querySelector('.icon');
             const generateBtnText = generateBtn.querySelector('.text');
-            
-            // --- EVENT LISTENERS ---
+
+            // --- AUTHENTICATION LOGIC ---
             loginButton.addEventListener('click', () => auth0.loginWithRedirect());
             logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
 
-            // --- AUTHENTICATION STATE HANDLING ---
             const handleAuthState = async () => {
                 const isAuthenticated = await auth0.isAuthenticated();
                 if (isAuthenticated) {
@@ -150,7 +147,7 @@
                     logoutButton.style.display = 'block';
                     editorContainer.style.display = 'block';
                     const user = await auth0.getUser();
-                    console.log('Logged in as:', user);
+                    console.log('User is authenticated:', user);
                 } else {
                     loginButton.style.display = 'block';
                     logoutButton.style.display = 'none';
@@ -158,18 +155,14 @@
                 }
             };
 
-            // --- PAGE LOAD LOGIC ---
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has("code") && urlParams.has("state")) {
-                try {
-                    await auth0.handleRedirectCallback();
-                    window.history.replaceState({}, document.title, "/");
-                } catch(e) { console.error("Error handling redirect callback:", e); }
+                await auth0.handleRedirectCallback();
+                window.history.replaceState({}, document.title, "/");
             }
-            
             await handleAuthState();
-            
-            // --- The rest of your editor logic ---
+
+            // --- EDITOR LOGIC ---
             const dialogueContainer = document.getElementById('dialogue-container');
             const addDialogueBtn = document.getElementById('add-dialogue-btn');
             const statusArea = document.getElementById('status-area');
@@ -192,9 +185,7 @@
             addRow(); addRow();
             addDialogueBtn.addEventListener('click', addRow);
             dialogueContainer.addEventListener('click', (event) => {
-                if (event.target.classList.contains('remove-btn')) {
-                    event.target.closest('.dialogue-row').remove();
-                }
+                if (event.target.classList.contains('remove-btn')) event.target.closest('.dialogue-row').remove();
             });
 
             generateBtn.addEventListener('click', async () => {
@@ -228,13 +219,9 @@
                 
                 try {
                     const accessToken = await auth0.getTokenSilently();
-                    
                     const response = await fetch('/api/generate-video', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${accessToken}`
-                        },
+                        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}`},
                         body: JSON.stringify({ dialogue: dialoguePayload, options: optionsPayload }),
                     });
                     if (!response.ok) throw new Error('Failed to queue job.');
@@ -263,9 +250,7 @@
                     }, 3000);
                 } catch (error) {
                     console.error("Generate error:", error);
-                    if (error.error === 'login_required') {
-                        // This can happen if the user's session expires in the background.
-                        // We can prompt them to log in again.
+                    if (error.error === 'login_required' || error.error === 'consent_required') {
                         auth0.loginWithRedirect();
                     } else {
                         statusArea.textContent = 'An error occurred. Please try again.';
