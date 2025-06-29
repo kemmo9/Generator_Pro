@@ -2,7 +2,7 @@ let auth0 = null;
 
 const auth0Config = {
     domain: "dev-23iqnnqsp0tbnxch.us.auth0.com", // Your CORRECTED domain
-    clientId: "99E30sRywMn8h4uFwa5edAbR27F6NGzU", // Your Client ID
+    clientId: "99E30sRywMn8h4uFwa5edAbR27F6NGzU", // Your CORRECTED Client ID
     authorizationParams: {
         redirect_uri: window.location.origin
     }
