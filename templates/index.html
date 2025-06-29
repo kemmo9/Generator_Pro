@@ -6,7 +6,52 @@
     <title>Make a Clip</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    <style>
+        :root {
+            --bg-color: #121212; --surface-color: #1e1e1e; --primary-color: #bb86fc;
+            --secondary-color: #03dac6; --text-color: #e0e0e0; --text-secondary: #a0a0b0; --border-color: #2c2c2c;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 2rem; }
+        .app-title-container { text-align: center; margin-bottom: 2.5rem; }
+        .app-title-container h1 { font-size: 2.5rem; font-weight: 700; margin: 0 0 1rem 0; }
+        .app-title-container h1 i { color: var(--primary-color); }
+        .header-container { display: flex; justify-content: center; align-items: center; position: relative; padding: 1rem 0; }
+        .auth-buttons { position: absolute; right: 0; }
+        .nav-button { background-color: var(--primary-color); color: #121212; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background-color 0.3s; }
+        .nav-button:hover { background-color: var(--secondary-color); }
+        .app-title-container .nav-menu { display: flex; justify-content: center; gap: 2rem; list-style: none; padding: 0; margin: 0; }
+        .nav-menu a { color: var(--text-secondary); text-decoration: none; font-weight: 500; padding: 0.5rem; transition: color 0.3s; }
+        .nav-menu a:hover { color: white; }
+        .nav-menu a.active { color: var(--primary-color); font-weight: 600; }
+        .editor-container { width: 100%; max-width: 800px; margin: 0 auto; background-color: var(--surface-color); padding: 2rem 2.5rem; border-radius: 12px; }
+        .step-title { font-weight: 600; margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        .accent-text { color: var(--primary-color); }
+        .selector-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
+        .option-box { border: 2px solid var(--border-color); border-radius: 8px; cursor: pointer; position: relative; transition: transform 0.2s, border-color 0.2s; background-color: var(--bg-color); padding: 1rem; text-align: center; }
+        .option-box:hover { transform: scale(1.05); }
+        .option-box.selected { border-color: var(--primary-color); }
+        .option-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; aspect-ratio: 9/16; }
+        .option-box .label { font-weight: 500; margin-top: 0.75rem; font-size: 0.9rem; }
+        .option-box i { font-size: 2rem; margin-bottom: 0.5rem; }
+        .subtitle-preview { padding: 1rem; font-size: 1.2rem; }
+        #standard-preview { font-family: 'Arial-Bold', sans-serif; color: white; text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000; }
+        #yellow-preview { font-family: 'Arial-Bold', sans-serif; color: yellow; text-shadow: -2.5px -2.5px 0 #000, 2.5px -2.5px 0 #000, -2.5px 2.5px 0 #000, 2.5px 2.5px 0 #000; }
+        #meme-preview { font-family: 'Impact', sans-serif; color: white; text-shadow: -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000; letter-spacing: 1px; }
+        select, input { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-size: 1rem; }
+        .dialogue-box { border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;}
+        .dialogue-row { display: grid; grid-template-columns: 1fr 1fr 3fr auto; gap: 1rem; align-items: center; }
+        .dialogue-row .remove-btn { background: #e94560; border: none; border-radius: 50%; width: 32px; height: 32px; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center;}
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; }
+        .controls button { padding: 0.8rem 1.5rem; font-size: 1.1rem; font-weight: 600; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.3s, transform 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        #add-dialogue-btn { background-color: #3a3a5a; }
+        #generate-btn { background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); color: #121212; }
+        #add-dialogue-btn:hover, #generate-btn:hover { transform: translateY(-2px); }
+        #generate-btn:disabled { background: #555; cursor: not-allowed; transform: none; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinner { animation: spin 1s linear infinite; }
+        .status { text-align: center; margin-top: 1.5rem; font-weight: 500; min-height: 24px; color: var(--text-secondary); }
+    </style>
 </head>
 <body>
     <div class="app-title-container">
@@ -63,7 +108,153 @@
         </div>
     </template>
     
-    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
-    <script src="/static/script.js"></script>
+    <script>
+        // THIS IS THE FINAL JAVASCRIPT CODE
+        let auth0 = null;
+
+        const auth0Config = {
+            domain: "dev-23iqnnqsp0tbnxch.us.auth0.com", // Your CORRECTED domain
+            clientId: "99E30sRywMn8h4uFwa5edAbR27F6NGzU", // Your CORRECTED Client ID
+            authorizationParams: {
+                redirect_uri: window.location.origin
+            }
+        };
+
+        const configureClient = async () => {
+            try {
+                auth0 = await createAuth0Client(auth0Config);
+            } catch (e) {
+                console.error("Auth0 SDK failed to initialize:", e);
+                return; // Stop if there's an error
+            }
+
+            const loginButton = document.getElementById('btn-login');
+            const logoutButton = document.getElementById('btn-logout');
+
+            loginButton.addEventListener('click', () => auth0.loginWithRedirect());
+            logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has("code") && urlParams.has("state")) {
+                await auth0.handleRedirectCallback();
+                window.history.replaceState({}, document.title, "/");
+            }
+
+            const isAuthenticated = await auth0.isAuthenticated();
+            if (isAuthenticated) {
+                loginButton.style.display = 'none';
+                logoutButton.style.display = 'block';
+            } else {
+                loginButton.style.display = 'block';
+                logoutButton.style.display = 'none';
+            }
+        };
+
+        const initializeEditor = () => {
+            const generateBtn = document.getElementById('generate-btn');
+            generateBtn.addEventListener('click', async () => {
+                const isAuthenticated = await auth0.isAuthenticated();
+                if (!isAuthenticated) {
+                    alert("Please log in to generate a video.");
+                    return auth0.loginWithRedirect();
+                }
+                
+                const generateBtnIcon = generateBtn.querySelector('.icon');
+                const generateBtnText = generateBtn.querySelector('.text');
+                generateBtn.disabled = true;
+                generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
+                generateBtnText.textContent = 'Generating...';
+                const statusArea = document.getElementById('status-area');
+                statusArea.innerHTML = 'Starting...';
+
+                const dialoguePayload = Array.from(document.querySelectorAll('.dialogue-row')).map(row => ({
+                    character: row.querySelector('.character-select').value,
+                    imagePlacement: row.querySelector('.placement-select').value,
+                    text: row.querySelector('.dialogue-input').value,
+                })).filter(line => line.text.trim() !== '');
+
+                if (dialoguePayload.length === 0) {
+                    alert('Please enter at least one line of dialogue.');
+                    generateBtn.disabled = false;
+                    generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                    generateBtnText.textContent = 'Generate Video'; return;
+                }
+                const optionsPayload = {
+                    template: document.querySelector('#template-selector .option-box.selected').dataset.template,
+                    backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video,
+                    subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style
+                };
+                
+                try {
+                    const accessToken = await auth0.getTokenSilently();
+                    const response = await fetch('/api/generate-video', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}`},
+                        body: JSON.stringify({ dialogue: dialoguePayload, options: optionsPayload }),
+                    });
+                    if (!response.ok) throw new Error('Failed to queue job.');
+                    const data = await response.json();
+                    const jobId = data.job_id;
+                    statusArea.textContent = `Job queued! Polling for status...`;
+                    
+                    const intervalId = setInterval(async () => {
+                        try {
+                            const statusResponse = await fetch(`/api/job-status/${jobId}`);
+                            if (!statusResponse.ok) return;
+                            const statusData = await statusResponse.json();
+                            statusArea.textContent = `Status: ${statusData.progress}`;
+                            if (statusData.status === 'finished' || statusData.status === 'failed') {
+                                clearInterval(intervalId);
+                                generateBtn.disabled = false;
+                                generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                                generateBtnText.textContent = 'Generate Video';
+                                if (statusData.status === 'finished') {
+                                    statusArea.innerHTML = `<p>Video is ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); font-weight: 600;">Click here to Download Your Clip</a>`;
+                                } else {
+                                    statusArea.textContent = `Job failed: ${statusData.progress}`;
+                                }
+                            }
+                        } catch (pollError) { console.error("Polling error:", pollError); }
+                    }, 3000);
+                } catch (error) {
+                    console.error("Generate error:", error);
+                    statusArea.textContent = 'An error occurred. Please try again.';
+                    generateBtn.disabled = false;
+                    generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                    generateBtnText.textContent = 'Generate Video';
+                }
+            });
+
+            const dialogueContainer = document.getElementById('dialogue-container');
+            const addDialogueBtn = document.getElementById('add-dialogue-btn');
+            const rowTemplate = document.getElementById('dialogue-row-template');
+            const setupSelector = (selectorId) => {
+                const selector = document.getElementById(selectorId);
+                selector.addEventListener('click', (event) => {
+                    const selectedOption = event.target.closest('.option-box');
+                    if (!selectedOption) return;
+                    selector.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
+                    selectedOption.classList.add('selected');
+                });
+            };
+            setupSelector('template-selector');
+            setupSelector('background-selector');
+            setupSelector('subtitle-selector');
+            const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
+            addRow(); addRow();
+            addDialogueBtn.addEventListener('click', addRow);
+            dialogueContainer.addEventListener('click', (event) => {
+                if (event.target.classList.contains('remove-btn')) event.target.closest('.dialogue-row').remove();
+            });
+        };
+        
+        // This is the most reliable way to start the app.
+        window.onload = () => {
+            // First, initialize the non-auth parts of the UI.
+            initializeEditor();
+            // Then, configure the authentication client.
+            configureClient();
+        };
+    </script>
 </body>
 </html>
