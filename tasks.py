@@ -6,11 +6,9 @@ from moviepy.editor import *
 import PIL.Image
 from rq import get_current_job
 
-# Compatibility fix
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
-# --- Configuration ---
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = { "peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq" }
 CHARACTER_IMAGE_PATHS = { "peter": "static/peter.png", "brian": "static/brian.png" }
@@ -29,7 +27,6 @@ cloudinary.config(
   secure = True
 )
 
-# --- Helper Functions ---
 def update_job_progress(message: str):
     job = get_current_job()
     if job:
@@ -57,10 +54,8 @@ def generate_audio_elevenlabs(text, voice_id, filename):
         print(error_details)
         return False, error_details
 
-# --- Main Worker Task ---
 def create_video_task(dialogue_data: list, options: dict):
-    dialogue_clips = []
-    temp_files = []
+    dialogue_clips, temp_files = [], []
     try:
         update_job_progress("Initializing...")
         subtitle_style = options.get("subtitleStyle", "standard")
@@ -68,11 +63,7 @@ def create_video_task(dialogue_data: list, options: dict):
         background_video_url = BACKGROUND_VIDEO_URLS.get(background_key, BACKGROUND_VIDEO_URLS["minecraft_parkour1"])
         temp_background_path = "temp_background.mp4"
         temp_files.append(temp_background_path)
-        subtitle_styles = {
-            "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
-            "yellow": {"fontsize": 45, "color": "yellow", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
-            "meme": {"fontsize": 50, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 3}
-        }
+        subtitle_styles = {"standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2}, "yellow": {"fontsize": 45, "color": "yellow", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5}, "meme": {"fontsize": 50, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 3}}
         selected_style = subtitle_styles.get(subtitle_style, subtitle_styles["standard"])
 
         update_job_progress("Downloading background video...")
@@ -80,9 +71,7 @@ def create_video_task(dialogue_data: list, options: dict):
         
         for i, line_data in enumerate(dialogue_data):
             update_job_progress(f"Generating audio {i+1}/{len(dialogue_data)}...")
-            character = line_data.get("character")
-            text = line_data.get("text")
-            image_placement = line_data.get("imagePlacement", "center")
+            character, text, image_placement = line_data.get("character"), line_data.get("text"), line_data.get("imagePlacement", "center")
             if not all([character, text, character in VOICE_IDS]): continue
             audio_filename = f"temp_audio_{i}.mp3"
             temp_files.append(audio_filename)
@@ -109,8 +98,6 @@ def create_video_task(dialogue_data: list, options: dict):
         final_video = CompositeVideoClip(video_clips_to_compose)
         output_filename = "final_video_temp.mp4"
         temp_files.append(output_filename)
-        
-        # THIS IS THE CRITICAL FIX FOR THE AbandonedJobError
         final_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", fps=24, logger='bar')
         
         update_job_progress("Uploading to cloud storage...")
