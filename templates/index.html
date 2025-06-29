@@ -6,8 +6,8 @@
     <title>Make a Clip</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Auth0 SDK is loaded first in the head -->
-    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    <!-- Auth0 SDK is loaded first in the head with the 'defer' attribute -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js" defer></script>
     
     <style>
         :root {
@@ -110,11 +110,12 @@
     </template>
     
     <script>
-        // Use window.onload which is the most robust way to ensure all external scripts like the Auth0 SDK are loaded.
-        window.onload = async () => {
+        // THIS IS THE CRITICAL FIX: We wrap everything in a function and call it
+        // only when the DOM is ready. This prevents race conditions.
+        const initializeApp = async () => {
             let auth0 = null;
             try {
-                // This is the correct function name provided by the Auth0 SDK
+                // The Auth0 SDK script has finished loading, so createAuth0Client now exists.
                 auth0 = await createAuth0Client({
                     domain: "dev-23lqnnqsp0tbnxch.us.auth0.com", // YOUR REAL AUTH0 DOMAIN
                     clientId: "99E38sRywWn8n4uFwa5edAbR27F6NGzU", // YOUR REAL AUTH0 CLIENT ID
@@ -123,12 +124,11 @@
                     }
                 });
             } catch (e) {
-                console.error("Auth0 SDK could not be initialized. Is the script tag correct?", e);
+                console.error("Auth0 SDK could not be initialized:", e);
                 alert("Authentication service is temporarily unavailable. Please try again later.");
                 return;
             }
 
-            // --- UI ELEMENTS ---
             const loginButton = document.getElementById('btn-login');
             const logoutButton = document.getElementById('btn-logout');
             const editorContainer = document.querySelector('.editor-container');
@@ -136,7 +136,6 @@
             const generateBtnIcon = generateBtn.querySelector('.icon');
             const generateBtnText = generateBtn.querySelector('.text');
             
-            // --- AUTHENTICATION LOGIC ---
             loginButton.addEventListener('click', () => auth0.loginWithRedirect());
             logoutButton.addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
 
@@ -146,8 +145,6 @@
                     loginButton.style.display = 'none';
                     logoutButton.style.display = 'block';
                     editorContainer.style.display = 'block';
-                    const user = await auth0.getUser();
-                    console.log('User is authenticated:', user);
                 } else {
                     loginButton.style.display = 'block';
                     logoutButton.style.display = 'none';
@@ -157,14 +154,11 @@
 
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has("code") && urlParams.has("state")) {
-                try {
-                    await auth0.handleRedirectCallback();
-                    window.history.replaceState({}, document.title, "/");
-                } catch(e) { console.error("Error handling redirect callback:", e); }
+                await auth0.handleRedirectCallback();
+                window.history.replaceState({}, document.title, "/");
             }
             await handleAuthState();
-
-            // --- EDITOR LOGIC ---
+            
             const dialogueContainer = document.getElementById('dialogue-container');
             const addDialogueBtn = document.getElementById('add-dialogue-btn');
             const statusArea = document.getElementById('status-area');
@@ -177,7 +171,7 @@
                     if (!selectedOption) return;
                     selector.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
                     selectedOption.classList.add('selected');
-                });
+});
             };
             setupSelector('template-selector');
             setupSelector('background-selector');
@@ -194,12 +188,10 @@
                 if (document.querySelector('#template-selector .option-box.selected').dataset.template !== 'character') {
                     alert('This template is coming soon!'); return;
                 }
-
                 generateBtn.disabled = true;
                 generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
                 generateBtnText.textContent = 'Generating...';
                 statusArea.innerHTML = '';
-
                 const dialoguePayload = Array.from(document.querySelectorAll('.dialogue-row')).map(row => ({
                     character: row.querySelector('.character-select').value,
                     imagePlacement: row.querySelector('.placement-select').value,
@@ -212,7 +204,6 @@
                     generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
                     generateBtnText.textContent = 'Generate Video'; return;
                 }
-
                 const optionsPayload = {
                     template: document.querySelector('#template-selector .option-box.selected').dataset.template,
                     backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video,
@@ -230,7 +221,6 @@
                     const data = await response.json();
                     const jobId = data.job_id;
                     statusArea.textContent = `Job queued! Polling for status...`;
-                    
                     const intervalId = setInterval(async () => {
                         try {
                             const statusResponse = await fetch(`/api/job-status/${jobId}`);
@@ -245,7 +235,7 @@
                                 if (statusData.status === 'finished') {
                                     statusArea.innerHTML = `<p>Video is ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); font-weight: 600;">Click here to Download Your Clip</a>`;
                                 } else {
-                                    statusArea.textContent = `Job failed. Please check the worker logs on Render for details.`;
+                                    statusArea.textContent = `Job failed: ${statusData.progress}`;
                                 }
                             }
                         } catch (pollError) { console.error("Polling error:", pollError); }
@@ -263,6 +253,9 @@
                 }
             });
         };
+        
+        // This is the most reliable way to start the app.
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>
