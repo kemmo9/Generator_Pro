@@ -29,6 +29,7 @@ async def queue_video_task(payload: Dict = Body(...)):
     if not dialogue_data:
         raise HTTPException(status_code=400, detail="Dialogue data is empty.")
     
+    # job_timeout is how long a worker can work on a job before it's considered failed. 15 minutes is safe.
     job = q.enqueue('tasks.create_video_task', dialogue_data, options_data, job_timeout='15m', result_ttl=3600)
     
     return JSONResponse({"job_id": job.id})
@@ -50,7 +51,7 @@ async def get_job_status(job_id: str):
         response["result"] = job.result
         response["progress"] = "Finished!"
     elif job.is_failed:
-        response["progress"] = "Job Failed"
+        response["progress"] = f"Job Failed: {job.exc_info}"
 
     return JSONResponse(response)
 
