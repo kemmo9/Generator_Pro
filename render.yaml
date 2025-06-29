@@ -1,4 +1,4 @@
-# The final, simplified, and correct blueprint.
+# The final, correct blueprint using a custom worker script.
 
 services:
   # 1. The Web Service
@@ -29,7 +29,6 @@ services:
   - type: worker
     name: ai-video-worker
     env: python
-    # NOTE: The buildPacks section is GONE. This is intentional.
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python worker.py"
     envVars:
