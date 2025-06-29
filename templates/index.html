@@ -6,7 +6,6 @@
     <title>Make a Clip</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- 1. ADD THE AUTH0 SDK SCRIPT -->
     <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
     <style>
         :root {
@@ -17,44 +16,46 @@
         .app-title-container { text-align: center; margin-bottom: 2.5rem; }
         .app-title-container h1 { font-size: 2.5rem; font-weight: 700; margin: 0 0 1rem 0; }
         .app-title-container h1 i { color: var(--primary-color); }
+        .header-container { display: flex; justify-content: center; align-items: center; position: relative; padding: 1rem 0; }
+        .auth-buttons { position: absolute; right: 0; }
+        .nav-button { background-color: var(--primary-color); color: #121212; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background-color 0.3s; }
+        .nav-button:hover { background-color: var(--secondary-color); }
         .app-title-container .nav-menu { display: flex; justify-content: center; gap: 2rem; list-style: none; padding: 0; margin: 0; }
         .nav-menu a { color: var(--text-secondary); text-decoration: none; font-weight: 500; padding: 0.5rem; transition: color 0.3s; }
         .nav-menu a:hover { color: white; }
         .nav-menu a.active { color: var(--primary-color); font-weight: 600; }
-        
-        /* NEW: Styling for the Login/Logout buttons and the header container */
-        .header-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            padding: 1rem 0;
-        }
-        .auth-buttons {
-            position: absolute;
-            right: 0;
-        }
-        .nav-button {
-            background-color: var(--primary-color);
-            color: #121212;
-            border: none;
-            padding: 0.6rem 1.2rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .nav-button:hover { background-color: var(--secondary-color); }
-        
         .editor-container { width: 100%; max-width: 800px; margin: 0 auto; background-color: var(--surface-color); padding: 2rem 2.5rem; border-radius: 12px; }
-        /* ... (The rest of your CSS is unchanged) ... */
+        .step-title { font-weight: 600; margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        .selector-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
+        .option-box { border: 2px solid var(--border-color); border-radius: 8px; cursor: pointer; position: relative; transition: transform 0.2s, border-color 0.2s; background-color: var(--bg-color); padding: 1rem; text-align: center; }
+        .option-box:hover { transform: scale(1.05); }
+        .option-box.selected { border-color: var(--primary-color); }
+        .option-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; aspect-ratio: 9/16; }
+        .option-box .label { font-weight: 500; margin-top: 0.75rem; font-size: 0.9rem; }
+        .option-box i { font-size: 2rem; margin-bottom: 0.5rem; }
+        .subtitle-preview { padding: 1rem; font-size: 1.2rem; }
+        #standard-preview { font-family: 'Arial-Bold', sans-serif; color: white; text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000; }
+        #yellow-preview { font-family: 'Arial-Bold', sans-serif; color: yellow; text-shadow: -2.5px -2.5px 0 #000, 2.5px -2.5px 0 #000, -2.5px 2.5px 0 #000, 2.5px 2.5px 0 #000; }
+        #meme-preview { font-family: 'Impact', sans-serif; color: white; text-shadow: -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000; letter-spacing: 1px; }
+        select, input { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-size: 1rem; }
+        .dialogue-box { border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;}
+        .dialogue-row { display: grid; grid-template-columns: 1fr 1fr 3fr auto; gap: 1rem; align-items: center; }
+        .dialogue-row .remove-btn { background: #e94560; border: none; border-radius: 50%; width: 32px; height: 32px; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center;}
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; }
+        .controls button { padding: 0.8rem 1.5rem; font-size: 1.1rem; font-weight: 600; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.3s, transform 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        #add-dialogue-btn { background-color: #3a3a5a; }
+        #generate-btn { background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); color: #121212; }
+        #add-dialogue-btn:hover, #generate-btn:hover { transform: translateY(-2px); }
+        #generate-btn:disabled { background: #555; cursor: not-allowed; transform: none; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinner { animation: spin 1s linear infinite; }
+        .status { text-align: center; margin-top: 1.5rem; font-weight: 500; min-height: 24px; color: var(--text-secondary); }
     </style>
 </head>
 <body>
     <div class="app-title-container">
         <div class="header-container">
             <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
-            <!-- 2. ADD THE BUTTONS -->
             <div class="auth-buttons">
                 <button id="btn-login" class="nav-button">Log In</button>
                 <button id="btn-logout" class="nav-button" style="display:none;">Log Out</button>
@@ -66,17 +67,43 @@
             <li><a href="#">For You</a></li>
         </ul>
     </div>
-
-    <!-- The rest of your editor HTML is unchanged -->
-    <main class="editor-container">
-        <!-- ... (Your 4-step editor UI goes here) ... -->
+    <main class="editor-container" style="display:none;">
+        <p class="step-title"><span style="color:var(--primary-color)">Step 1:</span> Choose Your Template</p>
+        <div class="selector-grid" id="template-selector">
+            <div class="option-box selected" data-template="character"><i class="fa-solid fa-comments"></i><div class="label">Character Dialogue</div></div>
+            <div class="option-box" data-template="reddit"><i class="fa-brands fa-reddit-alien"></i><div class="label">Reddit Stories</div></div>
+            <div class="option-box" data-template="text"><i class="fa-solid fa-mobile-screen-button"></i><div class="label">Text Messages</div></div>
+            <div class="option-box" data-template="meme"><i class="fa-solid fa-face-laugh-squint"></i><div class="label">Meme Templates</div></div>
+        </div>
+        <p class="step-title"><span style="color:var(--primary-color)">Step 2:</span> Choose Background Gameplay</p>
+        <div class="selector-grid" id="background-selector">
+            <div class="option-box selected" data-video="minecraft_parkour1"><img src="https://i.postimg.cc/tJpM0T1j/minecraft1.png" alt="Minecraft Parkour"><div class="label">Minecraft Parkour 1</div></div>
+            <div class="option-box" data-video="minecraft_parkour2"><img src="https://i.postimg.cc/8cRgrZ1D/minecraft2.png" alt="Minecraft Parkour 2"><div class="label">Minecraft Parkour 2</div></div>
+            <div class="option-box" data-video="subway_surfers1"><img src="https://i.postimg.cc/hG0YyBq1/subway1.png" alt="Subway Surfers 1"><div class="label">Subway Surfers 1</div></div>
+            <div class="option-box" data-video="subway_surfers2"><img src="https://i.postimg.cc/L82bQJtX/subway2.png" alt="Subway Surfers 2"><div class="label">Subway Surfers 2</div></div>
+        </div>
+        <p class="step-title"><span style="color:var(--primary-color)">Step 3:</span> Choose Subtitle Style</p>
+        <div class="selector-grid" id="subtitle-selector">
+            <div class="option-box selected" data-style="standard"><p id="standard-preview" class="subtitle-preview">Standard Style</p></div>
+            <div class="option-box" data-style="yellow"><p id="yellow-preview" class="subtitle-preview">Yellow Style</p></div>
+            <div class="option-box" data-style="meme"><p id="meme-preview" class="subtitle-preview">Meme Style</p></div>
+        </div>
+        <p class="step-title"><span style="color:var(--primary-color)">Step 4:</span> Write Your Script</p>
+        <div id="editor-container-inner"><div id="dialogue-container" class="dialogue-box"></div></div>
+        <div class="controls">
+            <button id="add-dialogue-btn"><i class="fa-solid fa-plus"></i> Add Dialogue Line</button>
+            <button id="generate-btn"><span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="text">Generate Video</span></button>
+        </div>
+        <div class="status" id="status-area"></div>
     </main>
-
     <template id="dialogue-row-template">
-        <!-- ... (Your dialogue row template is unchanged) ... -->
+        <div class="dialogue-row">
+            <select class="character-select"><option value="peter">Peter</option><option value="brian">Brian</option></select>
+            <select class="placement-select"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select>
+            <input type="text" class="dialogue-input" placeholder="Enter dialogue...">
+            <button class="remove-btn" title="Remove line">×</button>
+        </div>
     </template>
-    
-    <!-- This script tag now points to our new, Auth0-enabled script -->
     <script src="/static/script.js"></script>
 </body>
 </html>
