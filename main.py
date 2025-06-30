@@ -10,22 +10,15 @@ from starlette.middleware.sessions import SessionMiddleware
 from rq import Queue
 import redis
 
-from tasks import PREMIUM_STYLES # Import the set of premium styles
+from tasks import PREMIUM_STYLES
 
 app = FastAPI()
-
-app.add_middleware(
-    SessionMiddleware, 
-    secret_key=os.getenv("APP_SECRET_KEY", "a_dummy_secret_key_for_startup_only")
-)
-
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("APP_SECRET_KEY", "a_dummy_secret_key_for_startup_only"))
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
 conn = redis.from_url(redis_url)
 q = Queue(connection=conn)
-
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -84,7 +77,6 @@ async def create_checkout_session(request: Request, payload: dict = Body(...)):
 
 @app.post("/api/stripe-webhook")
 async def stripe_webhook(request: Request):
-    # Webhook logic remains the same
     pass
 
 @app.post("/api/generate-video")
@@ -97,35 +89,28 @@ async def queue_video_task(request: Request, payload: dict = Body(...)):
     user_tier = user.get("https://makeaclip.pro/tier", "free")
 
     if selected_style in PREMIUM_STYLES and user_tier == "free":
-        raise HTTPException(status_code=403, detail="This is a premium style. Please upgrade to use it.")
-
-    dialogue_data = payload.get("dialogue", [])
-    if not dialogue_data: raise HTTPException(status_code=400, detail="Dialogue data is empty.")
+        raise HTTPException(status_code=403, detail="This is a premium style. Please upgrade.")
     
-    job = q.enqueue('tasks.create_video_task', dialogue_data, options_data, job_timeout='15m')
+    # --- THIS IS THE NEW LOGIC TO ROUTE TO THE CORRECT TASK ---
+    if options_data.get("template") == "reddit":
+        reddit_data = payload.get("reddit_data")
+        if not reddit_data or not reddit_data.get("title"):
+             raise HTTPException(status_code=400, detail="Reddit title is required.")
+        job = q.enqueue('tasks.create_reddit_video_task', reddit_data, options_data)
+    else: # Default to character dialogue
+        dialogue_data = payload.get("dialogue_data", [])
+        if not dialogue_data: raise HTTPException(status_code=400, detail="Dialogue data is empty.")
+        job = q.enqueue('tasks.create_video_task', dialogue_data, options_data)
+    
     return {"job_id": job.id}
 
-# --- THIS IS THE CORRECTED ENDPOINT ---
 @app.get("/api/job-status/{job_id}")
 async def get_job_status(job_id: str):
     job = q.fetch_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found.")
-
-    response_data = {
-        "job_id": job.id,
-        "status": job.get_status(),
-        "progress": job.meta.get('progress', 'In queue...'),
-        "result": None  # Default to None
-    }
-
-    # Only if the job is finished, attach the result to the response
-    if job.is_finished:
-        response_data["result"] = job.result
-        response_data["progress"] = "Finished!"
-    elif job.is_failed:
-        response_data["progress"] = f"Job Failed: {job.exc_info}"
-    
+    if job is None: raise HTTPException(status_code=404, detail="Job not found.")
+    response_data = {"job_id": job.id, "status": job.get_status(), "progress": job.meta.get('progress', 'In queue...'), "result": None}
+    if job.is_finished: response_data["result"] = job.result
+    elif job.is_failed: response_data["progress"] = f"Job Failed: {job.exc_info}"
     return JSONResponse(response_data)
 
 @app.get("/health")
