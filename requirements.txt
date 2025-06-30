@@ -11,3 +11,4 @@ imageio-ffmpeg==0.4.8
 authlib==1.2.1
 python-jose[cryptography]==3.3.0
 httpx==0.25.0
+itsdangerous==2.1.2
