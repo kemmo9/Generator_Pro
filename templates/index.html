@@ -9,23 +9,20 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="app-title-container">
-        <div class="header-container">
-            <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
-            <!-- NEW HEADER STRUCTURE -->
-            <ul class="nav-menu">
-                <li><a href="#">Text to Speech</a></li>
-                <li><a href="/" class="active">Viral Editor</a></li>
-                <li><a href="/pricing">Pricing</a></li>
-                <!-- Login/Logout button is now a menu item -->
-                <li>
-                    {% if user %}
-                        <a href="/logout" class="nav-button">Log Out</a>
-                    {% else %}
-                        <a href="/login" class="nav-button">Log In / Sign Up</a>
-                    {% endif %}
-                </li>
-            </ul>
+    <!-- The DESKTOP header -->
+    <div class="header-container">
+        <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
+        <ul class="nav-menu">
+            <li><a href="#">Text to Speech</a></li>
+            <li><a href="/" class="active">Viral Editor</a></li>
+            <li><a href="/pricing">Pricing</a></li>
+        </ul>
+        <div class="auth-buttons">
+            {% if user %}
+                <a href="/logout" class="nav-button">Log Out</a>
+            {% else %}
+                <a href="/login" class="nav-button">Log In / Sign Up</a>
+            {% endif %}
         </div>
     </div>
     
@@ -64,6 +61,18 @@
         </div>
         <div class="status" id="status-area"></div>
     </main>
+
+    <!-- The NEW MOBILE navigation bar -->
+    <nav class="mobile-nav">
+        <a href="#"><i class="fa-solid fa-microphone-lines"></i><span>TTS</span></a>
+        <a href="/" class="active"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Editor</span></a>
+        <a href="/pricing"><i class="fa-solid fa-dollar-sign"></i><span>Pricing</span></a>
+        {% if user %}
+            <a href="/logout"><i class="fa-solid fa-user-check"></i><span>Profile</span></a>
+        {% else %}
+            <a href="/login"><i class="fa-solid fa-user-slash"></i><span>Profile</span></a>
+        {% endif %}
+    </nav>
 
     <template id="dialogue-row-template">
         <div class="dialogue-row">
@@ -159,7 +168,7 @@
             const dialogueContainer = document.getElementById('dialogue-container');
             const rowTemplate = document.getElementById('dialogue-row-template');
             const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
-            if (dialogueContainer.children.length === 0) { addRow(); addRow(); } // Add initial rows
+            if (dialogueContainer.children.length === 0) { addRow(); addRow(); }
             document.getElementById('add-dialogue-btn').addEventListener('click', addRow);
             dialogueContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove();
