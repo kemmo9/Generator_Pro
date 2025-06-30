@@ -22,17 +22,18 @@
     <div class="app-title-container">
         <div class="header-container">
             <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
+            <!-- NEW HEADER STRUCTURE -->
             <ul class="nav-menu">
                 <li><a href="/">Editor</a></li>
                 <li><a href="/pricing" class="active">Pricing</a></li>
+                <li>
+                    {% if user %}
+                        <a href="/logout" class="nav-button">Log Out</a>
+                    {% else %}
+                        <a href="/login" class="nav-button">Log In / Sign Up</a>
+                    {% endif %}
+                </li>
             </ul>
-            <div class="auth-buttons">
-                {% if user %}
-                    <a href="/logout" class="nav-button">Log Out</a>
-                {% else %}
-                    <a href="/login" class="nav-button">Log In / Sign Up</a>
-                {% endif %}
-            </div>
         </div>
     </div>
 
@@ -65,45 +66,11 @@
     <div id="status-area" style="text-align: center; margin-top: 1rem;"></div>
 
     <script>
+        // Your working Stripe JS from the last step goes here.
         const stripe = Stripe('{{ stripe_publishable_key }}');
-        const statusArea = document.getElementById('status-area');
-
-        // --- THIS IS THE FIX ---
-        // Using the real Price IDs you provided from the CSV export.
-        const proPriceId = 'price_1RfXZkFf7LkPmPagMZDqc90f';      // <-- CORRECT ID INSERTED HERE
-        const platinumPriceId = 'price_1RfXbEFf7LkPmPagZg0PpntS'; // <-- CORRECT ID INSERTED HERE
-
-        const handleSubscription = (priceId) => {
-            if (!{{ 'true' if user else 'false' }}) {
-                window.location.href = '/login';
-                return;
-            }
-            statusArea.textContent = 'Redirecting to checkout...';
-            fetch('/api/create-checkout-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ price_id: priceId })
-            })
-            .then(response => {
-                if (!response.ok) return response.json().then(err => { throw new Error(err.detail) });
-                return response.json();
-            })
-            .then(session => stripe.redirectToCheckout({ sessionId: session.id }))
-            .catch(error => {
-                console.error('Subscription Error:', error);
-                statusArea.textContent = `Error: ${error.message}`;
-            });
-        };
-        
-        document.getElementById('subscribe-pro').addEventListener('click', () => handleSubscription(proPriceId));
-        document.getElementById('subscribe-platinum').addEventListener('click', () => handleSubscription(platinumPriceId));
-
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('checkout_status') === 'success') {
-            statusArea.textContent = 'Subscription successful! Your plan is now active.';
-        } else if (urlParams.get('checkout_status') === 'cancel') {
-            statusArea.textContent = 'Subscription process cancelled.';
-        }
+        const proPriceId = 'price_1RfXZkFf7LkPmPagMZDqc90f'; 
+        const platinumPriceId = 'price_1RfXbEFf7LkPmPagZg0PpntS';
+        // ... etc.
     </script>
 </body>
 </html>
