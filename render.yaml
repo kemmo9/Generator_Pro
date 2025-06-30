@@ -1,5 +1,3 @@
-# The final, correct blueprint using a custom worker script.
-
 services:
   # 1. The Web Service
   - type: web
@@ -11,6 +9,14 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.4
+      - key: AUTH0_DOMAIN
+        value: "dev-23iqnnqsp0tbnxch.us.auth0.com" # Storing as plain text is fine for the domain
+      - key: AUTH0_CLIENT_ID
+        value: "99E30sRywMn8h4uFwa5edAbR27F6NGzU"  # Storing as plain text is fine for the client ID
+      - key: AUTH0_CLIENT_SECRET
+        sync: false # This is a secret
+      - key: APP_SECRET_KEY
+        sync: false # This is a secret
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
