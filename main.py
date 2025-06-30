@@ -1,27 +1,31 @@
 import os
 import json
+import stripe
 from authlib.integrations.starlette_client import OAuth
-from fastapi import FastAPI, Request, Body, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request, Body, HTTPException, Depends
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from rq import Queue
 import redis
 
-# --- Configuration ---
+# --- Configuration & Initialization ---
+app = FastAPI()
+
+# Session Middleware for user login
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("APP_SECRET_KEY"))
+
+# Stripe API Key (loaded from Render's secrets)
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+# Redis Queue for video processing
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
 conn = redis.from_url(redis_url)
 q = Queue(connection=conn)
 
-# --- App Initialization & Middleware ---
-app = FastAPI()
-
-# This middleware is essential for storing the user's login session in a secure cookie.
-# You MUST set APP_SECRET_KEY in your Render Environment Variables.
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("APP_SECRET_KEY"))
-
-# Mount static files (CSS, images)
+# Static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -32,78 +36,67 @@ oauth.register(
     client_id=os.getenv('AUTH0_CLIENT_ID'),
     client_secret=os.getenv('AUTH0_CLIENT_SECRET'),
     server_metadata_url=f"https://{os.getenv('AUTH0_DOMAIN')}/.well-known/openid-configuration",
-    client_kwargs={'scope': 'openid profile email'}
+    client_kwargs={'scope': 'openid profile email update:users'} # IMPORTANT: Add update:users scope
 )
 
-# --- Authentication Routes (The New Tactic) ---
-@app.get('/login')
-async def login(request: Request):
-    """Redirects the user to Auth0's hosted login page."""
-    redirect_uri = "https://www.makeaclip.pro/callback" # Use the live URL
-    return await oauth.auth0.authorize_redirect(request, redirect_uri)
+# --- Authentication & User Session Management ---
+async def get_user(request: Request):
+    """Dependency to get the current user from the session, if any."""
+    return request.session.get('user')
 
-@app.get('/logout')
-async def logout(request: Request):
-    """Logs the user out, clears the session cookie, and redirects."""
-    request.session.clear()
-    auth0_domain = os.getenv('AUTH0_DOMAIN')
-    client_id = os.getenv('AUTH0_CLIENT_ID')
-    # This URL must be in the "Allowed Logout URLs" in your Auth0 dashboard
-    return_to_url = "https://www.makeaclip.pro"
-    logout_url = f"https://{auth0_domain}/v2/logout?client_id={client_id}&returnTo={return_to_url}"
-    return RedirectResponse(url=logout_url)
-
-@app.get('/callback')
-async def callback(request: Request):
-    """
-    Handles the redirect from Auth0 after login.
-    Fetches the user's token and stores their info in the session.
-    """
-    token = await oauth.auth0.authorize_access_token(request)
-    request.session['user'] = token['userinfo']
-    return RedirectResponse(url="/") # Redirect back to the main page
-
-# --- Page and API Routes ---
+# --- Page Routes ---
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    """
-    Serves the main index page. It passes the user's information from the
-    session cookie to the template if they are logged in.
-    """
-    user = request.session.get('user')
+async def read_root(request: Request, user: dict = Depends(get_user)):
+    return templates.TemplateResponse("index.html", {"request": request, "user": user})
+
+@app.get("/pricing", response_class=HTMLResponse)
+async def read_pricing(request: Request, user: dict = Depends(get_user)):
+    # Pass the Stripe Publishable key to the pricing page template
+    stripe_publishable_key = os.getenv("STRIPE_PUBLISHABLE_KEY")
     return templates.TemplateResponse(
-        "index.html", 
-        {"request": request, "user": user}
+        "pricing.html", 
+        {"request": request, "user": user, "stripe_publishable_key": stripe_publishable_key}
     )
 
-@app.post("/api/generate-video")
-async def queue_video_task(request: Request, payload: dict = Body(...)):
-    """
-    Queues the video generation task. Now checks for a valid session
-    instead of a bearer token.
-    """
-    if not request.session.get('user'):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    dialogue_data = payload.get("dialogue", [])
-    options_data = payload.get("options", {})
-    if not dialogue_data:
-        raise HTTPException(status_code=400, detail="Dialogue data is empty.")
-    
-    job = q.enqueue('tasks.create_video_task', dialogue_data, options_data, job_timeout='15m', result_ttl=3600)
-    return {"job_id": job.id}
+# --- Stripe API Routes ---
+@app.post("/api/create-checkout-session")
+async def create_checkout_session(request: Request, payload: dict = Body(...)):
+    user = await get_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="You must be logged in to subscribe.")
 
-@app.get("/api/job-status/{job_id}")
-async def get_job_status(job_id: str):
-    job = q.fetch_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found.")
-    
-    response = {"job_id": job.id, "status": job.get_status(), "progress": job.meta.get('progress', 'Waiting...'), "result": job.result}
-    if job.is_failed:
-        response["progress"] = f"Job Failed: {job.exc_info}"
-    return response
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            line_items=[{'price': payload.get("price_id"), 'quantity': 1}],
+            mode='subscription',
+            success_url="https://www.makeaclip.pro/pricing?checkout_status=success",
+            cancel_url="https://www.makeaclip.pro/pricing?checkout_status=cancel",
+            # This links the Stripe session to the Auth0 user ID
+            client_reference_id=user['sub'] 
+        )
+        return JSONResponse({'id': checkout_session.id})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/health")
-async def health_check():
-    return {"status": "ok"}
+@app.post("/api/stripe-webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get('stripe-signature')
+    
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError as e:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    # Handle the 'checkout.session.completed' event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        auth0_user_id = session.get('client_reference_id')
+        # TODO: Here you will add the code to update the user's metadata in Auth0
+        print(f"Payment successful for user: {auth0_user_id}. Need to update their Auth0 profile.")
+
+    return JSONResponse({'status': 'success'})
+
+# ... (keep all your other routes like /login, /logout, /callback, api/generate-video, etc.) ...
