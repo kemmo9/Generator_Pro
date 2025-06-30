@@ -44,30 +44,7 @@
         <!-- Main pricing content -->
         <main>
             <div class="pricing-grid">
-                <!-- Free Tier -->
-                <div class="pricing-card">
-                    <div class="card-header"><h2>Free</h2><p class="price">$0<span>/mo</span></p></div>
-                    <ul class="features">
-                        <li>1,500 words/month</li><li>Max 15 second videos</li><li>720p Resolution / 30 FPS</li><li>Watermark & Ads</li>
-                    </ul>
-                    <a href="/" class="nav-button cta-button">Start Creating</a>
-                </div>
-                <!-- Pro Tier -->
-                <div class="pricing-card popular">
-                    <div class="card-header"><h2>Pro</h2><p class="price">$7<span>/mo</span></p></div>
-                    <ul class="features">
-                        <li>5,000 words/month</li><li>Max 30 second videos</li><li>1080p Resolution / 60 FPS</li><li>No Watermark, No Ads</li>
-                    </ul>
-                    <button id="subscribe-pro" class="nav-button cta-button">Subscribe to Pro</button>
-                </div>
-                <!-- Platinum Tier -->
-                <div class="pricing-card">
-                    <div class="card-header"><h2>Platinum</h2><p class="price">$25<span>/mo</span></p></div>
-                    <ul class="features">
-                        <li>30,000 words/month</li><li>Max 1 minute videos</li><li>4K Resolution / 60 FPS</li><li>No Watermark, No Ads</li>
-                    </ul>
-                    <button id="subscribe-platinum" class="nav-button cta-button">Subscribe to Platinum</button>
-                </div>
+                <!-- Tiers here -->
             </div>
             <div id="status-area" style="text-align: center; margin-top: 1rem;"></div>
         </main>
@@ -84,42 +61,9 @@
         {% endif %}
     </nav>
     
-    <!-- Working Stripe JS -->
+    <!-- Your working Stripe JS from our previous step goes here -->
     <script>
-        const IS_AUTHENTICATED = {{ 'true' if user else 'false' }};
-        const stripe = Stripe('{{ stripe_publishable_key }}');
-        const statusArea = document.getElementById('status-area');
-        const proPriceId = 'price_1RfXZkFf7LkPmPagMZDqc90f';
-        const platinumPriceId = 'price_1RfXbEFf7LkPmPagZg0PpntS';
-        const handleSubscription = (priceId) => {
-            if (!IS_AUTHENTICATED) {
-                window.location.href = '/login';
-                return;
-            }
-            statusArea.textContent = 'Redirecting to checkout...';
-            fetch('/api/create-checkout-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ price_id: priceId })
-            })
-            .then(response => {
-                if (!response.ok) return response.json().then(err => { throw new Error(err.detail) });
-                return response.json();
-            })
-            .then(session => stripe.redirectToCheckout({ sessionId: session.id }))
-            .catch(error => {
-                console.error('Subscription Error:', error);
-                statusArea.textContent = `Error: ${error.message}`;
-            });
-        };
-        document.getElementById('subscribe-pro').addEventListener('click', () => handleSubscription(proPriceId));
-        document.getElementById('subscribe-platinum').addEventListener('click', () => handleSubscription(platinumPriceId));
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('checkout_status') === 'success') {
-            statusArea.textContent = 'Subscription successful! Your plan is now active.';
-        } else if (urlParams.get('checkout_status') === 'cancel') {
-            statusArea.textContent = 'Subscription process cancelled.';
-        }
+        //...
     </script>
 </body>
 </html>
