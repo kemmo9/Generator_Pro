@@ -6,7 +6,9 @@
     <title>Make a Clip</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- This script is essential for Auth0 to work -->
     <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    <!-- This loads your custom styles -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -72,7 +74,32 @@
             }
         };
 
-        // This function updates the UI based on authentication state
+        // This function handles all UI events that don't need authentication
+        const initializeEditor = () => {
+            const dialogueContainer = document.getElementById('dialogue-container');
+            const rowTemplate = document.getElementById('dialogue-row-template');
+            
+            const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
+            if (dialogueContainer.children.length === 0) { addRow(); addRow(); }
+            
+            document.getElementById('add-dialogue-btn').addEventListener('click', addRow);
+            dialogueContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove();
+            });
+
+            document.getElementById('generate-btn').addEventListener('click', onGenerateClick);
+            
+            document.querySelectorAll('.selector-grid').forEach(grid => {
+                grid.addEventListener('click', (event) => {
+                    const selectedOption = event.target.closest('.option-box');
+                    if (!selectedOption) return;
+                    grid.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
+                    selectedOption.classList.add('selected');
+                });
+            });
+        };
+
+        // This function updates the UI based on whether the user is logged in
         const updateUI = async () => {
             const isAuthenticated = await auth0.isAuthenticated();
             document.getElementById('btn-login').style.display = isAuthenticated ? 'none' : 'block';
@@ -81,66 +108,55 @@
             document.getElementById('status-area').textContent = isAuthenticated ? '' : 'Please log in to generate a video.';
         };
         
-        // This function sets up all event listeners that don't depend on auth
-        const initializeEditor = () => {
-            const dialogueContainer = document.getElementById('dialogue-container');
-            const rowTemplate = document.getElementById('dialogue-row-template');
-
-            const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
-            if (dialogueContainer.children.length === 0) { addRow(); addRow(); }
-
-            document.getElementById('add-dialogue-btn').addEventListener('click', addRow);
-            dialogueContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove();
-            });
-
-            document.getElementById('generate-btn').addEventListener('click', onGenerateClick);
-        };
-        
-        // This function handles the video generation logic
+        // This function contains the logic for when the generate button is clicked
         const onGenerateClick = async () => {
-            if (!await auth0.isAuthenticated()) {
+            const isAuthenticated = await auth0.isAuthenticated();
+            if (!isAuthenticated) {
                 return auth0.loginWithRedirect();
             }
-            // ... Video generation logic from previous steps ...
-            alert("Video generation would start here!");
+            // --- The rest of your video generation logic would go here ---
+            // For now, it just shows an alert.
+            const statusArea = document.getElementById('status-area');
+            statusArea.textContent = "Starting video generation process...";
+            console.log("Video generation started by authenticated user.");
         };
 
-        // This is the main function that orchestrates everything
-        window.addEventListener('load', async () => {
-            // 1. Set up the basic editor UI immediately
-            initializeEditor();
-
-            // 2. Start the authentication process in the background
+        // This function configures the Auth0 client and handles login/logout
+        const configureAuth = async () => {
             try {
                 auth0 = await createAuth0Client(auth0Config);
             } catch (e) {
-                // If the SDK is not ready, poll until it is
-                console.error("Auth0 SDK not ready, retrying...");
+                console.error("Auth0 SDK failed to load. Retrying...");
                 const interval = setInterval(async () => {
                     try {
                         auth0 = await createAuth0Client(auth0Config);
                         clearInterval(interval);
-                        await handleAuthCallback();
-                    } catch (err) {}
-                }, 500);
+                        await configureAuth(); // Re-run this function once the SDK is loaded
+                    } catch (err) { /* Still not ready, wait for next interval */ }
+                }, 1000);
+                return;
             }
 
-            // 3. Handle the authentication callback if needed
-            await handleAuthCallback();
-        });
-        
-        // Helper to process the redirect and update the UI
-        const handleAuthCallback = async () => {
-            if (!auth0) return;
+            // Set up login and logout button listeners
+            document.getElementById('btn-login').addEventListener('click', () => auth0.loginWithRedirect());
+            document.getElementById('btn-logout').addEventListener('click', () => auth0.logout({ logoutParams: { returnTo: window.location.origin } }));
+
+            // Handle the redirect back from Auth0
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has("code") && urlParams.has("state")) {
                 await auth0.handleRedirectCallback();
                 window.history.replaceState({}, document.title, "/");
             }
+            
+            // Update the UI with the final auth state
             await updateUI();
         };
 
+        // This is the main entry point when the page loads
+        window.addEventListener('load', () => {
+            initializeEditor(); // Set up the non-auth UI first for responsiveness
+            configureAuth();    // Then configure authentication in the background
+        });
     </script>
 </body>
 </html>
