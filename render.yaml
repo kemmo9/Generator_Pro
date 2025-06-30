@@ -1,5 +1,4 @@
 services:
-  # 1. The Web Service
   - type: web
     name: ai-video-web
     env: python
@@ -10,13 +9,19 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.4
       - key: AUTH0_DOMAIN
-        value: "dev-23iqnnqsp0tbnxch.us.auth0.com" # Storing as plain text is fine for the domain
+        value: "dev-23iqnnqsp0tbnxch.us.auth0.com"
       - key: AUTH0_CLIENT_ID
-        value: "99E30sRywMn8h4uFwa5edAbR27F6NGzU"  # Storing as plain text is fine for the client ID
+        value: "99E30sRywMn8h4uFwa5edAbR27F6NGzU"
       - key: AUTH0_CLIENT_SECRET
-        sync: false # This is a secret
+        sync: false
       - key: APP_SECRET_KEY
-        sync: false # This is a secret
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
@@ -30,8 +35,6 @@ services:
           type: redis
           name: ai-video-queue
           property: connectionString
-
-  # 2. The Background Worker
   - type: worker
     name: ai-video-worker
     env: python
@@ -53,8 +56,6 @@ services:
           type: redis
           name: ai-video-queue
           property: connectionString
-
-  # 3. The Redis Queue
   - type: redis
     name: ai-video-queue
     plan: free
