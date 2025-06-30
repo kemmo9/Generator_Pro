@@ -13,12 +13,11 @@
         <div class="header-container">
             <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
             <div class="auth-buttons">
-                <!-- If the 'user' object exists (passed from main.py), show Logout. -->
-                <!-- Otherwise, show the link to the /login route. -->
+                <!-- Login/Logout buttons are still controlled by the backend -->
                 {% if user %}
                     <a href="/logout" class="nav-button">Log Out</a>
                 {% else %}
-                    <a href="/login" class="nav-button">Log In with Google</a>
+                    <a href="/login" class="nav-button">Log In / Sign Up</a>
                 {% endif %}
             </div>
         </div>
@@ -29,45 +28,40 @@
         </ul>
     </div>
     
+    <!-- The editor is now visible to EVERYONE, logged in or not -->
     <main class="editor-container">
-        <!-- If the user is logged in, show their name and the full editor. -->
+        <!-- The welcome message only shows if the user is logged in -->
         {% if user %}
             <p class="step-title"><span class="accent-text">Welcome, {{ user.name }}!</span></p>
-            
-            <p class="step-title"><span class="accent-text">Step 1:</span> Choose Your Template</p>
-            <div class="selector-grid" id="template-selector">
-                <div class="option-box selected" data-template="character"><i class="fa-solid fa-comments"></i><div class="label">Character Dialogue</div></div>
-                <div class="option-box" data-template="reddit"><i class="fa-brands fa-reddit-alien"></i><div class="label">Reddit Stories</div></div>
-            </div>
-            
-            <p class="step-title"><span class="accent-text">Step 2:</span> Choose Background Gameplay</p>
-            <div class="selector-grid" id="background-selector">
-                <div class="option-box selected" data-video="minecraft_parkour1"><img src="/static/minecraft1.png" alt="Minecraft Parkour"><div class="label">Minecraft Parkour 1</div></div>
-                <div class="option-box" data-video="minecraft_parkour2"><img src="/static/minecraft2.png" alt="Minecraft Parkour 2"><div class="label">Minecraft Parkour 2</div></div>
-                <div class="option-box" data-video="subway_surfers1"><img src="/static/subwaysurfer1.png" alt="Subway Surfers 1"><div class="label">Subway Surfers 1</div></div>
-                <div class="option-box" data-video="subway_surfers2"><img src="/static/subwaysurfer2.png" alt="Subway Surfers 2"><div class="label">Subway Surfers 2</div></div>
-            </div>
-
-            <p class="step-title"><span class="accent-text">Step 3:</span> Choose Subtitle Style</p>
-            <div class="selector-grid" id="subtitle-selector">
-                <div class="option-box selected" data-style="standard"><p class="subtitle-preview" id="standard-preview">Standard Style</p></div>
-                <div class="option-box" data-style="yellow"><p class="subtitle-preview" id="yellow-preview">Yellow Style</p></div>
-                <div class="option-box" data-style="meme"><p class="subtitle-preview" id="meme-preview">Meme Style</p></div>
-            </div>
-
-            <p class="step-title"><span class="accent-text">Step 4:</span> Write Your Script</p>
-            <div id="dialogue-container" class="dialogue-box"></div>
-            
-            <div class="controls">
-                <button id="add-dialogue-btn"><i class="fa-solid fa-plus"></i> Add Dialogue Line</button>
-                <button id="generate-btn"><span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="text">Generate Video</span></button>
-            </div>
-            <div class="status" id="status-area"></div>
-
-        <!-- If the user is NOT logged in, show a simple login prompt. -->
-        {% else %}
-            <p class="step-title" style="text-align: center;">Please <a href="/login">log in</a> to use the video editor.</p>
         {% endif %}
+        
+        <p class="step-title"><span class="accent-text">Step 1:</span> Choose Your Template</p>
+        <div class="selector-grid" id="template-selector">
+            <div class="option-box selected" data-template="character"><i class="fa-solid fa-comments"></i><div class="label">Character Dialogue</div></div>
+            <div class="option-box" data-template="reddit"><i class="fa-brands fa-reddit-alien"></i><div class="label">Reddit Stories</div></div>
+        </div>
+        
+        <p class="step-title"><span class="accent-text">Step 2:</span> Choose Background Gameplay</p>
+        <div class="selector-grid" id="background-selector">
+            <div class="option-box selected" data-video="minecraft_parkour1"><img src="/static/minecraft1.png" alt="Minecraft Parkour"><div class="label">Minecraft Parkour 1</div></div>
+            <div class="option-box" data-video="subway_surfers2"><img src="/static/subwaysurfer2.png" alt="Subway Surfers 2"><div class="label">Subway Surfers 2</div></div>
+        </div>
+
+        <p class="step-title"><span class="accent-text">Step 3:</span> Choose Subtitle Style</p>
+        <div class="selector-grid" id="subtitle-selector">
+            <div class="option-box selected" data-style="standard"><p class="subtitle-preview" id="standard-preview">Standard Style</p></div>
+            <div class="option-box" data-style="yellow"><p class="subtitle-preview" id="yellow-preview">Yellow Style</p></div>
+        </div>
+
+        <p class="step-title"><span class="accent-text">Step 4:</span> Write Your Script</p>
+        <div id="dialogue-container" class="dialogue-box"></div>
+        
+        <div class="controls">
+            <button id="add-dialogue-btn"><i class="fa-solid fa-plus"></i> Add Dialogue Line</button>
+            <!-- The Generate button is now always enabled -->
+            <button id="generate-btn"><span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="text">Generate Video</span></button>
+        </div>
+        <div class="status" id="status-area"></div>
     </main>
 
     <template id="dialogue-row-template">
@@ -79,12 +73,23 @@
         </div>
     </template>
     
-    <!-- This script only runs if the user is logged in -->
-    {% if user %}
     <script>
+        // This is the crucial link between backend and frontend.
+        // Jinja2 will replace this with 'true' if the user object exists, and 'false' otherwise.
+        const IS_AUTHENTICATED = {{ 'true' if user else 'false' }};
+
         document.addEventListener('DOMContentLoaded', () => {
             const generateBtn = document.getElementById('generate-btn');
+            
             generateBtn.addEventListener('click', async () => {
+                // FIRST, check if the user is logged in.
+                if (!IS_AUTHENTICATED) {
+                    // If not, redirect them to the login page and stop execution.
+                    window.location.href = '/login';
+                    return; 
+                }
+
+                // If the script reaches here, the user IS authenticated. Proceed with generation.
                 const generateBtnIcon = generateBtn.querySelector('.icon');
                 const generateBtnText = generateBtn.querySelector('.text');
                 generateBtn.disabled = true;
@@ -153,7 +158,7 @@
                 }
             });
 
-            // Standard UI setup logic
+            // Standard UI setup logic that runs for everyone
             const dialogueContainer = document.getElementById('dialogue-container');
             const rowTemplate = document.getElementById('dialogue-row-template');
             const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
@@ -172,6 +177,5 @@
             });
         });
     </script>
-    {% endif %}
 </body>
 </html>
