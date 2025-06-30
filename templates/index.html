@@ -9,9 +9,11 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- NEW: Wrapper for the entire desktop header -->
-    <div class="header-wrapper">
+    <!-- This container holds everything for the centered desktop view -->
+    <div class="site-container">
+
         <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
+
         <ul class="nav-menu">
             <li><a href="#">Text to Speech</a></li>
             <li><a href="/" class="active">Viral Editor</a></li>
@@ -24,14 +26,8 @@
                 {% endif %}
             </li>
         </ul>
-    </div>
-
-    <!-- NEW: Mobile-only logo, positioned right above the editor -->
-    <div class="mobile-only-logo">
-        <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
-    </div>
-    
-    <main class="editor-container">
+        
+        <!-- Welcome message and editor content follows directly -->
         {% if user %}
             <p class="step-title"><span class="accent-text">Welcome, {{ user.name }}!</span></p>
         {% endif %}
@@ -65,9 +61,10 @@
             <button id="generate-btn"><span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="text">Generate Video</span></button>
         </div>
         <div class="status" id="status-area"></div>
-    </main>
 
-    <!-- The MOBILE navigation bar at the bottom of the page -->
+    </div> <!-- End of site-container -->
+
+    <!-- The MOBILE-ONLY navigation bar -->
     <nav class="mobile-nav">
         <a href="#"><i class="fa-solid fa-microphone-lines"></i><span>TTS</span></a>
         <a href="/" class="active"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Editor</span></a>
@@ -90,8 +87,7 @@
     
     <script>
         const IS_AUTHENTICATED = {{ 'true' if user else 'false' }};
-        // The fully functional JavaScript from the previous step is still correct.
-        // It does not need to be changed.
+        // The fully functional JavaScript from the previous steps is still correct and goes here.
     </script>
 </body>
 </html>
