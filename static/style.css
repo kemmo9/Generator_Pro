@@ -1,45 +1,16 @@
 :root {
-    --bg-color: #121212;
-    --surface-color: #1e1e1e; /* We'll use this for the option boxes */
-    --primary-color: #bb86fc;
-    --secondary-color: #03dac6;
-    --text-color: #e0e0e0;
-    --text-secondary: #a0a0b0;
-    --border-color: #2c2c2c;
+    --bg-color: #121212; --surface-color: #1e1e1e; --primary-color: #bb86fc;
+    --secondary-color: #03dac6; --text-color: #e0e0e0; --text-secondary: #a0a0b0; --border-color: #2c2c2c;
 }
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    margin: 0;
-    padding: 2rem;
-    padding-bottom: 100px; /* Space for mobile nav */
-}
-/* NEW: Main container for the entire site content on PC */
-.site-container {
-    max-width: 960px; /* A wider container for a more spacious feel */
-    margin: 0 auto;
-}
-h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    text-align: center;
-}
-h1 i { color: var(--primary-color); }
+body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 2rem; padding-bottom: 100px; /* Space for mobile nav */ }
+.app-title-container { text-align: center; margin-bottom: 2.5rem; }
 
-/* --- NEW DESKTOP MENU --- */
-.nav-menu {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 2rem;
-    list-style: none;
-    padding: 0;
-    margin: 0 0 3rem 0; /* Space below the menu */
-    flex-wrap: wrap;
-}
+/* --- DESKTOP HEADER (Reverted to original good version) --- */
+.desktop-header { display: flex; justify-content: center; align-items: center; position: relative; padding: 1rem 0; }
+.desktop-header h1 { font-size: 2.5rem; font-weight: 700; margin: 0; }
+.desktop-header h1 i { color: var(--primary-color); }
+.auth-buttons { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+.nav-menu { display: flex; justify-content: center; gap: 2rem; list-style: none; padding: 0; margin: 0; }
 .nav-menu a { color: var(--text-secondary); text-decoration: none; font-weight: 500; padding: 0.5rem; transition: color 0.3s; }
 .nav-menu a:hover, .nav-menu a.active { color: white; }
 .nav-menu a.active { font-weight: 600; color: var(--primary-color); }
@@ -47,35 +18,18 @@ h1 i { color: var(--primary-color); }
 .nav-button:hover { background-color: var(--secondary-color); }
 .mobile-header, .mobile-nav { display: none; } /* Hide all mobile elements on desktop */
 
-/* --- EDITOR STYLES (No more container) --- */
-.step-title {
-    font-weight: 600;
-    margin-top: 3rem; /* More space between steps */
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.5rem;
-}
+.editor-container { width: 100%; max-width: 800px; margin: 0 auto; background-color: var(--surface-color); padding: 2rem 2.5rem; border-radius: 12px; box-sizing: border-box; }
+.step-title { font-weight: 600; margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
 .accent-text { color: var(--primary-color); }
 .selector-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
-.option-box {
-    border: 2px solid var(--border-color);
-    background-color: var(--surface-color); /* Matches screenshot */
-    border-radius: 8px;
-    cursor: pointer;
-    transition: transform 0.2s, border-color 0.2s;
-    padding: 0.5rem;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-}
+.option-box { border: 2px solid var(--border-color); border-radius: 8px; cursor: pointer; position: relative; transition: transform 0.2s, border-color 0.2s; background-color: var(--bg-color); padding: 0.5rem; text-align: center; display: flex; flex-direction: column; }
 .option-box:hover { transform: scale(1.05); }
 .option-box.selected { border-color: var(--primary-color); }
 .option-box img { width: 100%; flex-grow: 1; object-fit: cover; border-radius: 6px; aspect-ratio: 9/16; }
 .option-box .label { font-weight: 500; margin-top: 0.75rem; font-size: 0.9rem; padding: 0 0.25rem; }
 .subtitle-preview { padding: 1rem; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-grow: 1; }
-select, input { background-color: var(--surface-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-size: 1rem; width: 100%; box-sizing: border-box; }
-.dialogue-box { border: 1px solid var(--border-color); background-color: var(--surface-color); border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;}
+select, input { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-size: 1rem; width: 100%; box-sizing: border-box; }
+.dialogue-box { border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;}
 .dialogue-row { display: grid; grid-template-columns: 1fr 1fr 3fr auto; gap: 1rem; align-items: center; }
 .dialogue-row .remove-btn { background: #e94560; border: none; border-radius: 50%; width: 32px; height: 32px; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0;}
 .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; }
@@ -86,18 +40,13 @@ select, input { background-color: var(--surface-color); color: var(--text-color)
 .spinner { animation: spin 1s linear infinite; }
 .status { text-align: center; margin-top: 1.5rem; font-weight: 500; min-height: 24px; color: var(--text-secondary); }
 
-/* --- Mobile-Only Styles --- */
+/* --- Advanced Mobile-Only Styles --- */
 @media (max-width: 768px) {
     body { padding: 1rem; padding-bottom: 100px; }
-    .site-container h1, .site-container .nav-menu { display: none; } /* Hide desktop header/menu */
-
-    .mobile-header {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin-bottom: 2rem; /* Space below mobile logo */
-    }
-    .mobile-header h1 { font-size: 2rem; margin: 0; }
+    .app-title-container { margin-bottom: 1.5rem; }
+    .desktop-header { display: none; } /* Hide the entire desktop header complex */
+    .mobile-header { display: block; text-align: center; } /* Show the mobile logo */
+    .mobile-header h1 { font-size: 2rem; margin: 0 0 1rem 0; }
 
     .mobile-nav {
         display: flex; justify-content: space-around; align-items: center;
@@ -108,7 +57,10 @@ select, input { background-color: var(--surface-color); color: var(--text-color)
     .mobile-nav a i { font-size: 1.5rem; }
     .mobile-nav a.active { color: var(--primary-color); }
     
+    .editor-container { padding: 1rem 0.5rem; margin: 0 auto; }
     .step-title { margin-top: 2rem; }
+    
+    /* Carousel: Shows ~2.3 items to make scroll obvious */
     .selector-grid {
         display: flex; overflow-x: auto; padding: 0.5rem;
         scroll-snap-type: x mandatory; gap: 0.75rem;
