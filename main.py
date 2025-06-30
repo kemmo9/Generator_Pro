@@ -84,7 +84,7 @@ async def create_checkout_session(request: Request, payload: dict = Body(...)):
 
 @app.post("/api/stripe-webhook")
 async def stripe_webhook(request: Request):
-    # ... Webhook logic remains the same ...
+    # Webhook logic remains the same
     pass
 
 @app.post("/api/generate-video")
@@ -94,8 +94,6 @@ async def queue_video_task(request: Request, payload: dict = Body(...)):
     
     options_data = payload.get("options", {})
     selected_style = options_data.get("subtitleStyle")
-    
-    # In a real app, you would fetch this from Auth0 metadata after the webhook updates it.
     user_tier = user.get("https://makeaclip.pro/tier", "free")
 
     if selected_style in PREMIUM_STYLES and user_tier == "free":
@@ -107,10 +105,28 @@ async def queue_video_task(request: Request, payload: dict = Body(...)):
     job = q.enqueue('tasks.create_video_task', dialogue_data, options_data, job_timeout='15m')
     return {"job_id": job.id}
 
+# --- THIS IS THE CORRECTED ENDPOINT ---
 @app.get("/api/job-status/{job_id}")
 async def get_job_status(job_id: str):
-    # ... This route remains the same ...
-    pass
+    job = q.fetch_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    response_data = {
+        "job_id": job.id,
+        "status": job.get_status(),
+        "progress": job.meta.get('progress', 'In queue...'),
+        "result": None  # Default to None
+    }
+
+    # Only if the job is finished, attach the result to the response
+    if job.is_finished:
+        response_data["result"] = job.result
+        response_data["progress"] = "Finished!"
+    elif job.is_failed:
+        response_data["progress"] = f"Job Failed: {job.exc_info}"
+    
+    return JSONResponse(response_data)
 
 @app.get("/health")
 async def health_check():
