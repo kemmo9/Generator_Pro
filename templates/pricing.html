@@ -20,50 +20,24 @@
 </head>
 <body>
     <div class="site-container">
-        <!-- The DESKTOP header -->
         <header class="desktop-header">
-            <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
-            <ul class="nav-menu">
-                <li><a href="/">Editor</a></li>
-                <li><a href="/pricing" class="active">Pricing</a></li>
-            </ul>
-            <div class="auth-buttons">
-                {% if user %}
-                    <a href="/logout" class="nav-button">Log Out</a>
-                {% else %}
-                    <a href="/login" class="nav-button">Log In / Sign Up</a>
-                {% endif %}
-            </div>
+             <!-- ... desktop header ... -->
         </header>
-
-        <!-- The MOBILE-ONLY header -->
         <div class="mobile-header">
-            <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
+             <!-- ... mobile header ... -->
         </div>
-
-        <!-- Main pricing content -->
         <main>
             <div class="pricing-grid">
-                <!-- Tiers here -->
+                 <!-- ... pricing tiers ... -->
             </div>
             <div id="status-area" style="text-align: center; margin-top: 1rem;"></div>
         </main>
     </div>
-
-    <!-- The MOBILE navigation bar -->
     <nav class="mobile-nav">
-        <a href="/"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Editor</span></a>
-        <a href="/pricing" class="active"><i class="fa-solid fa-dollar-sign"></i><span>Pricing</span></a>
-        {% if user %}
-            <a href="/logout"><i class="fa-solid fa-user-check"></i><span>Profile</span></a>
-        {% else %}
-            <a href="/login"><i class="fa-solid fa-user-slash"></i><span>Profile</span></a>
-        {% endif %}
+         <!-- ... mobile nav ... -->
     </nav>
-    
-    <!-- Your working Stripe JS from our previous step goes here -->
     <script>
-        //...
+        // Your working Stripe JS from our previous step goes here.
     </script>
 </body>
 </html>
