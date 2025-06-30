@@ -8,7 +8,7 @@ h1 { font-size: 2.5rem; font-weight: 700; margin: 0 0 1rem 0; }
 h1 i { color: var(--primary-color); }
 .header-container { display: flex; justify-content: center; align-items: center; position: relative; padding: 1rem 0; }
 .auth-buttons { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
-.nav-button { background-color: var(--primary-color); color: #121212; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; text-decoration: none; transition: background-color 0.3s; }
+.nav-button { background-color: var(--primary-color); color: #121212; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: background-color 0.3s; }
 .nav-button:hover { background-color: var(--secondary-color); }
 .nav-menu { display: flex; justify-content: center; gap: 2rem; list-style: none; padding: 0; margin: 0; }
 .nav-menu a { color: var(--text-secondary); text-decoration: none; font-weight: 500; padding: 0.5rem; transition: color 0.3s; }
@@ -42,34 +42,31 @@ select, input { background-color: var(--bg-color); color: var(--text-color); bor
 .spinner { animation: spin 1s linear infinite; }
 .status { text-align: center; margin-top: 1.5rem; font-weight: 500; min-height: 24px; color: var(--text-secondary); }
 
-
-/* --- NEW: Mobile Optimization --- */
+/* --- Mobile Optimization --- */
 @media (max-width: 768px) {
-    body {
-        padding: 1rem;
-    }
+    body { padding: 1rem; }
+    .app-title-container { margin-bottom: 1.5rem; }
     .header-container {
-        flex-direction: column;
-        position: static;
-        padding: 0;
+        flex-direction: column; /* Stack logo and buttons vertically */
+        gap: 1rem;              /* Add space between logo and buttons */
+        padding-bottom: 1rem;
     }
     .auth-buttons {
-        position: static;
-        transform: none;
-        margin-top: 1rem;
+        position: static;       /* Remove absolute positioning */
+        transform: none;        /* Reset transform */
     }
-    .editor-container {
-        padding: 1.5rem 1rem;
+    .nav-menu {
+        gap: 1rem;              /* Reduce gap between menu items */
+        justify-content: center;/* Ensure menu items are centered */
     }
+    .editor-container { padding: 1.5rem 1rem; }
     .dialogue-row {
-        grid-template-columns: 1fr; /* Stack all elements vertically */
+        grid-template-columns: 1fr; /* Stack all dropdowns/inputs vertically */
         gap: 0.75rem;
     }
     .dialogue-row .remove-btn {
-        width: 100%; /* Make remove button full width */
+        width: 100%;
         border-radius: 6px;
     }
-    .controls {
-        grid-template-columns: 1fr; /* Stack control buttons vertically */
-    }
+    .controls { grid-template-columns: 1fr; }
 }
