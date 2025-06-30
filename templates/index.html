@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- ... head content ... -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Make a Clip</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="site-container">
         <header class="desktop-header">
             <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
             <ul class="nav-menu">
-                <li><a href="#">TTS</a></li>
-                <li><a href="/" class="active">Editor</a></li>
+                <li><a href="#">Text to Speech</a></li>
+                <li><a href="/" class="active">Viral Editor</a></li>
                 <li><a href="/pricing">Pricing</a></li>
             </ul>
             <div class="auth-buttons">
@@ -19,13 +24,35 @@
         <div class="mobile-header"><h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1></div>
         
         <main>
-            {% if user %}<p class="step-title"><span class="accent-text">Welcome, {{ user.get('name') }}!</span></p>{% endif %}
+            {% if user %}<p class="step-title"><span class="accent-text">Welcome, {{ user.get('name', 'Creator') }}!</span></p>{% endif %}
             <p class="step-title"><span class="accent-text">Step 1:</span> Choose Your Template</p>
             <div class="selector-grid" id="template-selector">
                 <div class="option-box selected" data-template="character"><i class="fa-solid fa-comments"></i><div class="label">Character Dialogue</div></div>
                 <div class="option-box" data-template="reddit"><i class="fa-brands fa-reddit-alien"></i><div class="label">Reddit Stories</div></div>
             </div>
-            <!-- ... Steps 2 & 3 with all options ... -->
+            <p class="step-title"><span class="accent-text">Step 2:</span> Choose Background Gameplay</p>
+            <div class="selector-grid" id="background-selector">
+                <div class="option-box selected" data-video="minecraft_parkour1"><img src="/static/minecraft1.png" alt="Minecraft Parkour"></div>
+                <div class="option-box" data-video="minecraft_parkour2"><img src="/static/minecraft2.png" alt="Minecraft Parkour 2"></div>
+                <div class="option-box" data-video="subway_surfers1"><img src="/static/subwaysurfer1.png" alt="Subway Surfers 1"></div>
+                <div class="option-box" data-video="subway_surfers2"><img src="/static/subwaysurfer2.png" alt="Subway Surfers 2"></div>
+            </div>
+            <p class="step-title"><span class="accent-text">Step 3:</span> Choose Subtitle Style</p>
+            <div class="selector-grid" id="subtitle-selector">
+                <div class="option-box selected" data-style="standard"><p class="subtitle-preview" id="standard-preview">Standard</p></div>
+                <div class="option-box" data-style="yellow"><p class="subtitle-preview" id="yellow-preview">Yellow</p></div>
+                <div class="option-box" data-style="meme"><p class="subtitle-preview" id="meme-preview">Meme</p></div>
+                <div class="option-box" data-style="crisp_white"><p class="subtitle-preview" id="crisp_white-preview">Crisp</p></div>
+                <div class="option-box" data-style="minimalist"><p class="subtitle-preview" id="minimalist-preview">Minimalist</p></div>
+                <div class="option-box" data-style="glow_purple"><span class="pro-badge">Pro</span><p class="subtitle-preview" id="glow_purple-preview">Purple Glow</p></div>
+                <div class="option-box" data-style="retro_wave"><span class="pro-badge">Pro</span><p class="subtitle-preview" id="retro_wave-preview">Retro Wave</p></div>
+                <div class="option-box" data-style="comic_book"><span class="pro-badge">Pro</span><p class="subtitle-preview" id="comic_book-preview">Comic</p></div>
+                <div class="option-box" data-style="valorant"><span class="pro-badge">Pro</span><p class="subtitle-preview" id="valorant-preview">Valorant</p></div>
+                <div class="option-box" data-style="subtle_gradient"><span class="pro-badge">Pro</span><p class="subtitle-preview" id="subtle_gradient-preview">Gradient</p></div>
+                <div class="option-box" data-style="fire"><span class="pro-badge">Pro</span><p class="subtitle-preview" id="fire-preview">Fire</p></div>
+                <div class="option-box" data-style="professional"><span class="pro-badge">Pro</span><p class="subtitle-preview" id="professional-preview">Pro Block</p></div>
+                <div class="option-box" data-style="horror"><span class="pro-badge">Pro</span><p class="subtitle-preview" id="horror-preview">Horror</p></div>
+            </div>
             <p class="step-title"><span class="accent-text">Step 4:</span> Write Your Script</p>
             <div id="editor-forms">
                 <div id="dialogue-editor">
@@ -45,9 +72,20 @@
             <div class="status" id="status-area"></div>
         </main>
     </div>
-    <nav class="mobile-nav"><!-- ... mobile nav ... --></nav>
-    <template id="dialogue-row-template"><!-- ... dialogue row template ... --></template>
-    
+    <nav class="mobile-nav">
+        <a href="#"><i class="fa-solid fa-microphone-lines"></i><span>TTS</span></a>
+        <a href="/" class="active"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Editor</span></a>
+        <a href="/pricing"><i class="fa-solid fa-dollar-sign"></i><span>Pricing</span></a>
+        {% if user %}<a href="/logout"><i class="fa-solid fa-user-check"></i><span>Profile</span></a>{% else %}<a href="/login"><i class="fa-solid fa-user-slash"></i><span>Profile</span></a>{% endif %}
+    </nav>
+    <template id="dialogue-row-template">
+        <div class="dialogue-row">
+            <select class="character-select"><option value="peter">Peter</option><option value="brian">Brian</option></select>
+            <select class="placement-select"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select>
+            <input type="text" class="dialogue-input" placeholder="Enter dialogue...">
+            <button class="remove-btn" title="Remove line">×</button>
+        </div>
+    </template>
     <script>
         const IS_AUTHENTICATED = {{ 'true' if user else 'false' }};
         document.addEventListener('DOMContentLoaded', () => {
@@ -63,24 +101,69 @@
             const generateBtn = document.getElementById('generate-btn');
             generateBtn.addEventListener('click', async () => {
                 if (!IS_AUTHENTICATED) { window.location.href = '/login'; return; }
-                // ... (Spinner logic) ...
+                const generateBtnIcon = generateBtn.querySelector('.icon');
+                const generateBtnText = generateBtn.querySelector('.text');
+                generateBtn.disabled = true;
+                generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
+                generateBtnText.textContent = 'Generating...';
+                const statusArea = document.getElementById('status-area');
+                statusArea.textContent = 'Starting...';
                 const activeTemplate = document.querySelector('#template-selector .option-box.selected').dataset.template;
                 let dataPayload;
                 if (activeTemplate === 'character') {
-                    dataPayload = { dialogue_data: Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, text: r.querySelector('.dialogue-input').value })).filter(l => l.text) };
+                    dataPayload = { dialogue_data: Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, imagePlacement: r.querySelector('.placement-select').value, text: r.querySelector('.dialogue-input').value })).filter(l => l.text) };
+                    if (dataPayload.dialogue_data.length === 0) { alert('Please enter at least one line of dialogue.'); /*... reset button ...*/ return; }
                 } else {
                     dataPayload = { reddit_data: { title: document.getElementById('reddit-title').value, body: document.getElementById('reddit-body').value } };
+                    if (!dataPayload.reddit_data.title) { alert('Please enter a Reddit title.'); /*... reset button ...*/ return; }
                 }
-                const optionsPayload = { template: activeTemplate, /* ... other options ... */ };
+                const optionsPayload = { template: activeTemplate, backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style };
                 const payload = { ...dataPayload, options: optionsPayload };
-                // ... (The entire working fetch/polling logic goes here) ...
+                try {
+                    const response = await fetch('/api/generate-video', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                    if (!response.ok) { const err = await response.json(); throw new Error(err.detail || 'Failed to start job.'); }
+                    const data = await response.json();
+                    statusArea.textContent = `Job queued! Polling...`;
+                    const intervalId = setInterval(async () => {
+                        const statusResponse = await fetch(`/api/job-status/${data.job_id}`);
+                        if (!statusResponse.ok) return;
+                        const statusData = await statusResponse.json();
+                        statusArea.textContent = `Status: ${statusData.progress}`;
+                        if (statusData.status === 'finished' || statusData.status === 'failed') {
+                            clearInterval(intervalId);
+                            generateBtn.disabled = false;
+                            generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                            generateBtnText.textContent = 'Generate Video';
+                            if (statusData.status === 'finished') {
+                                statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Clip</a>`;
+                            } else {
+                                statusArea.textContent = `Failed: ${statusData.progress}`;
+                            }
+                        }
+                    }, 3000);
+                } catch (error) {
+                    statusArea.textContent = `Error: ${error.message}`;
+                    generateBtn.disabled = false;
+                    generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                    generateBtnText.textContent = 'Generate Video';
+                }
             });
             const dialogueContainer = document.getElementById('dialogue-container');
             const rowTemplate = document.getElementById('dialogue-row-template');
             const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
             if (dialogueContainer.children.length === 0) { addRow(); addRow(); }
             document.getElementById('add-dialogue-btn').addEventListener('click', addRow);
-            // ... (All other working event listeners for remove button, selector grids, etc.)
+            dialogueContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove();
+            });
+            document.querySelectorAll('.selector-grid').forEach(grid => {
+                grid.addEventListener('click', (event) => {
+                    const selectedOption = event.target.closest('.option-box');
+                    if (!selectedOption) return;
+                    grid.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
+                    selectedOption.classList.add('selected');
+                });
+            });
         });
     </script>
 </body>
