@@ -8,17 +8,37 @@ from PIL import Image, ImageDraw, ImageFont
 from rq import get_current_job
 import textwrap
 import time
+from jinja2 import Environment, FileSystemLoader # <-- THIS IS THE MISSING LINE
 
-# --- THE DEFINITIVE FIX for the 'ANTIALIAS' error ---
-# This line makes our new version of Pillow compatible with the older version of MoviePy.
+# This ensures compatibility with newer versions of the Pillow library
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
-# --- CONFIGURATION (No changes needed here) ---
+# --- CONFIGURATION (Complete and Final) ---
 HCTI_API_USER_ID = os.getenv("HCTI_USER_ID")
 HCTI_API_KEY = os.getenv("HCTI_API_KEY")
+
+SUBTITLE_STYLES = {
+    "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
+    "yellow": {"fontsize": 45, "color": "#FFD700", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
+    "meme": {"fontsize": 50, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 3, "kerning": 1},
+    "minimalist": {"fontsize": 36, "color": "#E0E0E0", "font": "Arial"},
+    "glow_purple": {"fontsize": 42, "color": "white", "font": "Arial-Bold", "stroke_color": "#bb86fc", "stroke_width": 1.5},
+    "valorant": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "#FD4556", "stroke_width": 2},
+    "comic_book": {"fontsize": 45, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 5, "kerning": 2},
+    "professional": {"fontsize": 36, "color": "#FFFFFF", "font": "Arial", "bg_color": 'rgba(0, 0, 0, 0.6)'},
+    "horror": {"fontsize": 55, "color": "#A40606", "font": "Verdana-Bold", "kerning": -2},
+    "retro_wave": {"fontsize": 48, "color": "#F72585", "font": "Arial-Bold", "stroke_color": "#7209B7", "stroke_width": 2},
+    "fire": {"fontsize": 50, "color": "#FFD700", "font": "Impact", "stroke_color": "#E25822", "stroke_width": 2.5},
+    "ice": {"fontsize": 48, "color": "white", "font": "Arial-Bold", "stroke_color": "#00B4D8", "stroke_width": 2.5}
+}
+PREMIUM_STYLES = {"glow_purple", "valorant", "comic_book", "professional", "horror", "retro_wave", "fire", "ice"}
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq", "reddit": "jpuuy9amUxVn651Jjmtq"}
+CHARACTER_IMAGE_PATHS = {
+    "peter": os.path.join(os.path.dirname(__file__), "static", "peter.png"),
+    "brian": os.path.join(os.path.dirname(__file__), "static", "brian.png")
+}
 BACKGROUND_VIDEO_URLS = {
     "minecraft_parkour1": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041495/hcipgj40g2rkujvkr5vi.mp4",
     "minecraft_parkour2": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041842/lth6r8frjh29qobragsh.mp4",
@@ -26,18 +46,23 @@ BACKGROUND_VIDEO_URLS = {
     "subway_surfers2": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751043573/lbxmatbcaroagjnqaf58.mp4"
 }
 cloudinary.config(cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"), api_key=os.getenv("CLOUDINARY_API_KEY"), api_secret=os.getenv("CLOUDINARY_API_SECRET"), secure=True)
+
+# Set up Jinja2 to find the new HTML template
 template_env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 
-# --- HELPER FUNCTIONS (No changes needed here) ---
+# --- HELPER FUNCTIONS ---
 def update_job_progress(message: str):
     job = get_current_job(); job.meta['progress'] = message; job.save_meta() if job else None; print(f"Job Progress: {message}")
+
 def download_file(url, local_filename):
     with requests.get(url, stream=True) as r: r.raise_for_status(); open(local_filename, 'wb').write(r.content)
     return local_filename
+
 def generate_audio_elevenlabs(text, filename, voice_id):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {"Accept": "audio/mpeg", "Content-Type": "application/json", "xi-api-key": ELEVENLABS_API_KEY}
     data = {"text": text, "model_id": "eleven_multilingual_v2"}; r=requests.post(url, json=data, headers=headers); r.raise_for_status(); open(filename, "wb").write(r.content)
+
 def format_count(num_str):
     try:
         if isinstance(num_str, (int, float)): num = num_str
@@ -48,17 +73,14 @@ def format_count(num_str):
         return str(int(num))
     except (ValueError, TypeError): return num_str
 
-# --- REDDIT IMAGE GENERATION (No changes needed here) ---
-def create_reddit_post_image_via_api(data):
+# --- Reddit Image Generation ---
+def create_reddit_post_image_via_api(data, text_chunk, part_num):
     job_id = get_current_job().id
     template = template_env.get_template('reddit_template.html')
-    # Use generic icons for now to simplify
-    icon_url = "https://i.imgur.com/Kq4g5tW.png" 
-    tick_url = "https://i.imgur.com/3ZJ7kMh.png" 
-    likes_icon_url = "https://i.imgur.com/eYn0m6a.png" 
-    comments_icon_url = "https://i.imgur.com/s273I29.png"
+    icon_url = "https://i.imgur.com/Kq4g5tW.png"; tick_url = "https://i.imgur.com/3ZJ7kMh.png"
+    likes_icon_url = "https://i.imgur.com/eYn0m6a.png"; comments_icon_url = "https://i.imgur.com/s273I29.png"
     html = template.render(
-        subreddit=data['subreddit'], username=data['username'], title=data['title'], body="",
+        subreddit=data['subreddit'], username=data['username'], title=data['title'], body=text_chunk,
         upvotes=format_count(data['upvotes']), comments=format_count(data['comments']),
         icon_url=icon_url, tick_url=tick_url, likes_icon_url=likes_icon_url, comments_icon_url=comments_icon_url
     )
@@ -66,82 +88,58 @@ def create_reddit_post_image_via_api(data):
     response = requests.post('https://hcti.io/v1/image', data=api_data, auth=(HCTI_API_USER_ID, HCTI_API_KEY))
     response.raise_for_status()
     image_url = response.json()['url']
-    image_filename = f"temp_reddit_frame_{job_id}.png"
+    image_filename = f"temp_reddit_frame_{job_id}_{part_num}.png"
     download_file(image_url, image_filename)
     return image_filename
 
-# --- THE NEW MULTI-SCENE REDDIT VIDEO TASK ---
+# --- Main RQ Task Functions ---
 def create_reddit_video_task(reddit_data: dict, options: dict):
-    update_job_progress("Initializing multi-scene Reddit video...")
-    temp_files = []
+    update_job_progress("Initializing multi-scene Reddit video..."); temp_files = []
     try:
-        title_text = reddit_data.get('title', '')
-        body_text = reddit_data.get('body', '')
-
-        # --- Audio Generation ---
-        update_job_progress("Generating voice for title..."); 
+        title_text = reddit_data.get('title', ''); body_text = reddit_data.get('body', '')
+        update_job_progress("Generating voiceover for title..."); 
         title_vo_filename = f"temp_vo_title_{get_current_job().id}.mp3"; temp_files.append(title_vo_filename)
         generate_audio_elevenlabs(title_text, title_vo_filename, VOICE_IDS.get("reddit"))
         title_audio_clip = AudioFileClip(title_vo_filename)
 
         body_audio_clip = None
         if body_text:
-            update_job_progress("Generating voice for body..."); 
+            update_job_progress("Generating voiceover for body..."); 
             body_vo_filename = f"temp_vo_body_{get_current_job().id}.mp3"; temp_files.append(body_vo_filename)
             generate_audio_elevenlabs(body_text, body_vo_filename, VOICE_IDS.get("reddit"))
             body_audio_clip = AudioFileClip(body_vo_filename)
 
         total_duration = title_audio_clip.duration + (body_audio_clip.duration if body_audio_clip else 0)
-
-        # --- Video Scene Generation ---
         update_job_progress("Downloading background video...")
         bg_url = BACKGROUND_VIDEO_URLS.get(options.get("backgroundVideo", "minecraft_parkour1"))
         temp_bg_path = download_file(bg_url, f"temp_bg_{get_current_job().id}.mp4"); temp_files.append(temp_bg_path)
         background_clip = VideoFileClip(temp_bg_path).set_duration(total_duration)
 
-        # Scene 1: Reddit Post Image
         update_job_progress("Generating post image...")
-        image_path = create_reddit_post_image_via_api(reddit_data)
+        # For this template, we create one image with the title, and no body text.
+        image_path = create_reddit_post_image_via_api(reddit_data, "", 1)
         temp_files.append(image_path)
-        reddit_post_clip = ImageClip(image_path).set_duration(title_audio_clip.duration).resize(width=1000).set_position('center')
-        scene1_audio = title_audio_clip
-
-        # Scene 2: Subtitles for Body Text
+        scene1_clip = ImageClip(image_path).set_duration(title_audio_clip.duration).resize(width=1000).set_position('center')
+        
         scene2_clips = []
-        scene2_audio = None
         if body_audio_clip:
-            scene2_audio = body_audio_clip.set_start(title_audio_clip.duration)
-            subtitle_style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"))
-            # Simple word-level subtitles for now
-            words = body_text.split()
-            word_clips = []
-            start_time = 0
-            for word in words:
-                duration = len(word) / len(body_text) * body_audio_clip.duration
-                txt_clip = TextClip(word, **subtitle_style, size=(background_clip.w * 0.9, None)).set_position('center').set_duration(duration).set_start(start_time)
-                word_clips.append(txt_clip)
-                start_time += duration
-            
-            subtitles_clip = CompositeVideoClip(word_clips, size=background_clip.size).set_start(title_audio_clip.duration)
+            subtitle_style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"), SUBTITLE_STYLES["standard"])
+            # A simple implementation for subtitles. Can be improved with word-level timing.
+            subtitles_clip = TextClip(body_text, **subtitle_style, size=(background_clip.w * 0.9, None), method='caption').set_position('center').set_duration(body_audio_clip.duration).set_start(title_audio_clip.duration)
             scene2_clips.append(subtitles_clip)
 
-        # --- Composition ---
         update_job_progress("Compositing all scenes...")
-        final_audio = concatenate_audioclips([clip for clip in [scene1_audio, scene2_audio] if clip])
-        
-        final_video = CompositeVideoClip([background_clip, reddit_post_clip] + scene2_clips).set_audio(final_audio)
+        final_audio = concatenate_audioclips([clip for clip in [title_audio_clip, body_audio_clip] if clip])
+        final_video = CompositeVideoClip([background_clip, scene1_clip] + scene2_clips).set_audio(final_audio)
         
         output_filename = f"final_reddit_{get_current_job().id}.mp4"; temp_files.append(output_filename)
-        final_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", fps=24)
+        final_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", fps=24, logger='bar')
         
-        update_job_progress("Uploading..."); 
-        upload_result = cloudinary.uploader.upload(output_filename, resource_type="video")
+        update_job_progress("Uploading..."); upload_result = cloudinary.uploader.upload(output_filename, resource_type="video")
         return {"video_url": upload_result['secure_url']}
     finally:
         for f in temp_files: os.remove(f) if os.path.exists(f) else None
 
-
-# --- Original Character Dialogue Task (No changes needed) ---
 def create_video_task(dialogue_data: list, options: dict):
     update_job_progress("Initializing character dialogue video..."); temp_files = []
     try:
@@ -160,7 +158,7 @@ def create_video_task(dialogue_data: list, options: dict):
         video_clips = []; current_time = 0; update_job_progress("Compositing video...")
         selected_style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"))
         for i, clip_data in enumerate(dialogue_data):
-            char_path = os.path.join(os.path.dirname(__file__), "static", f"{clip_data['character']}.png")
+            char_path = CHARACTER_IMAGE_PATHS[clip_data["character"]]
             img = ImageClip(char_path).set_duration(audio_clips[i].duration).set_start(current_time).set_position(clip_data.get("imagePlacement", "center")).resize(height=300)
             txt = TextClip(clip_data["text"], **selected_style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(("center", 0.8), relative=True)
             video_clips.extend([img, txt]); current_time += audio_clips[i].duration
