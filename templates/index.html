@@ -10,7 +10,7 @@
 </head>
 <body>
     <div class="site-container">
-        <!-- Desktop Header (Matches your screenshot) -->
+        <!-- Desktop Header -->
         <header class="desktop-header">
             <div class="auth-buttons">
                 {% if user %}<a href="/logout" class="nav-button">Log Out</a>{% else %}<a href="/login" class="nav-button">Log In</a>{% endif %}
@@ -72,8 +72,16 @@
                 </div>
                 <div id="reddit-editor" style="display: none;">
                     <form id="reddit-form" class="reddit-editor-form">
+                        <div class="input-grid">
+                            <input type="text" id="reddit-subreddit" name="subreddit" value="r/askreddit" required>
+                            <input type="text" id="reddit-username" name="username" value="u/Anonymous" required>
+                        </div>
                         <input type="text" id="reddit-title" name="title" placeholder="Reddit Post Title..." required>
-                        <textarea id="reddit-body" name="body" placeholder="Enter the main story..."></textarea>
+                        <textarea id="reddit-body" name="body" rows="8" placeholder="Enter the full story here. It will be automatically split into multiple parts if it's long."></textarea>
+                        <div class="input-grid">
+                            <input type="text" id="reddit-upvotes" name="upvotes" value="21.4k">
+                            <input type="text" id="reddit-comments" name="comments" value="1.8k">
+                        </div>
                     </form>
                 </div>
             </div>
@@ -121,15 +129,12 @@
             const subtitleSelector = document.getElementById('subtitle-selector');
             const scrollLeftBtn = document.getElementById('scroll-left');
             const scrollRightBtn = document.getElementById('scroll-right');
-            
-            if (scrollLeftBtn) {
+
+            if (scrollLeftBtn && scrollRightBtn) {
                 scrollLeftBtn.addEventListener('click', () => {
                     const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
                     subtitleSelector.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
                 });
-            }
-
-            if (scrollRightBtn) {
                 scrollRightBtn.addEventListener('click', () => {
                     const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
                     subtitleSelector.scrollBy({ left: scrollAmount, behavior: 'smooth' });
@@ -159,7 +164,16 @@
                         return;
                     }
                 } else {
-                    dataPayload = { reddit_data: { title: document.getElementById('reddit-title').value, body: document.getElementById('reddit-body').value } };
+                    dataPayload = {
+                        reddit_data: {
+                            subreddit: document.getElementById('reddit-subreddit').value,
+                            username: document.getElementById('reddit-username').value,
+                            title: document.getElementById('reddit-title').value,
+                            body: document.getElementById('reddit-body').value,
+                            upvotes: document.getElementById('reddit-upvotes').value,
+                            comments: document.getElementById('reddit-comments').value
+                        }
+                    };
                     if (!dataPayload.reddit_data.title) {
                         alert('Please enter a Reddit title.');
                         generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
@@ -191,7 +205,7 @@
                             generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
                             generateBtnText.textContent = 'Generate Video';
                             if (statusData.status === 'finished') {
-                                statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Clip</a>`;
+                                statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Your Clip</a>`;
                             } else {
                                 statusArea.textContent = `Failed: ${statusData.progress}`;
                             }
