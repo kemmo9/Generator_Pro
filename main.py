@@ -3,7 +3,7 @@ import json
 import stripe
 from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, Request, Body, HTTPException, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -12,125 +12,172 @@ import redis
 
 from tasks import PREMIUM_STYLES
 
-# --- App Initialization & Configuration ---
+# --- Configuration & Initialization ---
 app = FastAPI()
 
-# THIS IS CRITICAL: Mounts the 'static' directory so the server can find style.css
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# Session Middleware for user login
+# THIS IS THE CRITICAL FIX for Render startup issues.
+# It provides a default key so the server can always start.
+# You MUST set a real, secure key in your Render Environment Variables for production.
 app.add_middleware(
     SessionMiddleware, 
-    secret_key=os.getenv("APP_SECRET_KEY", "a_dummy_secret_key_for_startup_only_must_be_set_in_render")
+    secret_key=os.getenv("APP_SECRET_KEY", "a_very_long_and_super_secret_string_for_local_testing")
 )
 
-# Stripe API Key
+# Load secrets and configurations from environment variables
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
+AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID')
+AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET')
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
-# Redis Queue
-redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
-conn = redis.from_url(redis_url)
+# Initialize Redis Queue
+conn = redis.from_url(REDIS_URL)
 q = Queue(connection=conn)
 
-# Templates
+# Mount static files (CSS, images) and configure templates
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# Auth0 OAuth Configuration
+# Configure Auth0 OAuth client
 oauth = OAuth()
 oauth.register(
     name='auth0',
-    client_id=os.getenv('AUTH0_CLIENT_ID'),
-    client_secret=os.getenv('AUTH0_CLIENT_SECRET'),
-    server_metadata_url=f"https://{os.getenv('AUTH0_DOMAIN')}/.well-known/openid-configuration",
+    client_id=AUTH0_CLIENT_ID,
+    client_secret=AUTH0_CLIENT_SECRET,
+    server_metadata_url=f"https://{AUTH0_DOMAIN}/.well-known/openid-configuration",
     client_kwargs={'scope': 'openid profile email update:users'}
 )
 
+# --- User Session Dependency ---
 async def get_user(request: Request):
+    """A dependency that gets the current user from the session, if they exist."""
     return request.session.get('user')
 
-# --- Page Routes ---
+# --- Page Rendering Routes ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, user: dict = Depends(get_user)):
+    """Serves the main editor page."""
     return templates.TemplateResponse("index.html", {"request": request, "user": user})
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def read_pricing(request: Request, user: dict = Depends(get_user)):
+    """Serves the pricing page."""
     stripe_publishable_key = os.getenv("STRIPE_PUBLISHABLE_KEY")
-    return templates.TemplateResponse("pricing.html", {"request": request, "user": user, "stripe_publishable_key": stripe_publishable_key})
+    return templates.TemplateResponse(
+        "pricing.html", 
+        {"request": request, "user": user, "stripe_publishable_key": stripe_publishable_key}
+    )
+
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    """Serves a blank icon to prevent 404 errors in the browser console."""
+    # Ensure you have a blank file named 'favicon.ico' in your 'static' folder
+    return FileResponse(os.path.join("static", "favicon.ico"))
 
 # --- Authentication Routes ---
 @app.get('/login')
 async def login(request: Request):
+    """Redirects the user to the Auth0 login page."""
     redirect_uri = "https://www.makeaclip.pro/callback"
     return await oauth.auth0.authorize_redirect(request, redirect_uri)
 
 @app.get('/logout')
 async def logout(request: Request):
+    """Clears the user session and redirects to Auth0's logout endpoint."""
     request.session.clear()
-    logout_url = f"https://{os.getenv('AUTH0_DOMAIN')}/v2/logout?client_id={os.getenv('AUTH0_CLIENT_ID')}&returnTo=https://www.makeaclip.pro"
+    logout_url = f"https://{AUTH0_DOMAIN}/v2/logout?client_id={AUTH0_CLIENT_ID}&returnTo=https://www.makeaclip.pro"
     return RedirectResponse(url=logout_url)
 
 @app.get('/callback')
 async def callback(request: Request):
+    """Handles the redirect from Auth0 after a successful login."""
     token = await oauth.auth0.authorize_access_token(request)
-    request.session['user'] = token['userinfo']
+    request.session['user'] = token['userinfo'] # Store user data in the session cookie
     return RedirectResponse(url="/")
 
 # --- API Routes ---
 @app.post("/api/create-checkout-session")
-async def create_checkout_session(request: Request, payload: dict = Body(...)):
-    user = await get_user(request)
-    if not user: raise HTTPException(status_code=401, detail="Must be logged in.")
+async def create_checkout_session(request: Request, payload: dict = Body(...), user: dict = Depends(get_user)):
+    """Creates a Stripe checkout session for a subscription."""
+    if not user:
+        raise HTTPException(status_code=401, detail="You must be logged in to subscribe.")
+    
     try:
         checkout_session = stripe.checkout.Session.create(
             line_items=[{'price': payload.get("price_id"), 'quantity': 1}],
             mode='subscription',
             success_url="https://www.makeaclip.pro/pricing?checkout_status=success",
             cancel_url="https://www.makeaclip.pro/pricing?checkout_status=cancel",
-            client_reference_id=user['sub']
+            client_reference_id=user['sub'] # Links this checkout to the Auth0 user ID
         )
         return JSONResponse({'id': checkout_session.id})
-    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/stripe-webhook")
 async def stripe_webhook(request: Request):
-    # This logic will be completed next, for now it just acknowledges the request
+    """Listens for successful payments from Stripe."""
+    payload = await request.body()
+    sig_header = request.headers.get('stripe-signature')
+    
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        auth0_user_id = session.get('client_reference_id')
+        # TODO: Add logic here to update the user's tier in Auth0 Management API
+        print(f"Payment successful for user: {auth0_user_id}. Their tier needs to be updated.")
+
     return JSONResponse({'status': 'success'})
 
 @app.post("/api/generate-video")
-async def queue_video_task(request: Request, payload: dict = Body(...)):
-    user = request.session.get('user')
-    if not user: raise HTTPException(status_code=401, detail="Not authenticated")
+async def queue_video_task(request: Request, payload: dict = Body(...), user: dict = Depends(get_user)):
+    """Queues a video generation task after checking user authentication and tier."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     
     options_data = payload.get("options", {})
     selected_style = options_data.get("subtitleStyle")
-    user_tier = user.get("https://makeaclip.pro/tier", "free") # Placeholder until webhook is finished
+    user_tier = user.get("https://makeaclip.pro/tier", "free")
 
     if selected_style in PREMIUM_STYLES and user_tier == "free":
-        raise HTTPException(status_code=403, detail="This is a premium style. Please upgrade.")
+        raise HTTPException(status_code=403, detail="This is a premium style. Please upgrade your plan.")
     
-    if options_data.get("template") == "reddit":
-        reddit_data = payload.get("reddit_data")
-        if not reddit_data or not reddit_data.get("title"):
-             raise HTTPException(status_code=400, detail="Reddit title is required.")
-        job = q.enqueue('tasks.create_reddit_video_task', reddit_data, options_data)
+    template = options_data.get("template")
+    if template == "reddit":
+        job = q.enqueue('tasks.create_reddit_video_task', payload.get("reddit_data", {}), options_data)
+    elif template == "character":
+        job = q.enqueue('tasks.create_video_task', payload.get("dialogue_data", []), options_data)
     else:
-        dialogue_data = payload.get("dialogue_data", [])
-        if not dialogue_data: raise HTTPException(status_code=400, detail="Dialogue data is empty.")
-        job = q.enqueue('tasks.create_video_task', dialogue_data, options_data)
+        raise HTTPException(status_code=400, detail="Invalid template specified.")
     
     return {"job_id": job.id}
 
 @app.get("/api/job-status/{job_id}")
 async def get_job_status(job_id: str):
+    """Checks the status of a video generation job."""
     job = q.fetch_job(job_id)
-    if job is None: raise HTTPException(status_code=404, detail="Job not found.")
-    response_data = {"job_id": job.id, "status": job.get_status(), "progress": job.meta.get('progress', 'In queue...'), "result": None}
-    if job.is_finished: response_data["result"] = job.result
-    elif job.is_failed: response_data["progress"] = f"Job Failed: {job.exc_info or 'Unknown error'}"
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    
+    response_data = {
+        "job_id": job.id,
+        "status": job.get_status(),
+        "progress": job.meta.get('progress', 'In queue...'),
+        "result": job.result
+    }
+    if job.is_failed:
+        response_data["progress"] = f"Job Failed: {job.exc_info or 'Unknown error'}"
+        
     return JSONResponse(response_data)
 
 @app.get("/health")
 async def health_check():
+    """A simple health check endpoint for Render."""
     return {"status": "ok"}
