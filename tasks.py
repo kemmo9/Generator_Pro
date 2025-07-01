@@ -14,11 +14,7 @@ import time
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
-# =========================================================================================
-# --- THE DEFINITIVE FIX: Absolute Path Discovery ---
-# This code block determines the absolute path to the directory where this script lives.
-# It then uses this path to locate the 'static' folder. This is the robust solution.
-# =========================================================================================
+# This is the robust method for finding the static folder from the worker.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
@@ -42,7 +38,6 @@ PREMIUM_STYLES = {"glow_purple", "valorant", "comic_book", "professional", "horr
 # --- CONFIGURATION ---
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq"}
-# Use the absolute path for assets loaded by the worker
 CHARACTER_IMAGE_PATHS = {"peter": os.path.join(STATIC_DIR, "peter.png"), "brian": os.path.join(STATIC_DIR, "brian.png")}
 BACKGROUND_VIDEO_URLS = {
     "minecraft_parkour1": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041495/hcipgj40g2rkujvkr5vi.mp4",
@@ -117,10 +112,15 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
         full_audio_clip = AudioFileClip(vo_filename)
         
         chunks = textwrap.wrap(story_text, width=350, replace_whitespace=False, drop_whitespace=False, break_long_words=False, break_on_hyphens=False)
-        if not chunks: chunks = [" "]; total_chars = sum(len(c) for c in chunks) or 1; image_clips = []
+        if not chunks: chunks = [" "]
+        
+        # --- THE FIX: Calculate total_chars *before* the loop ---
+        total_chars = sum(len(c) for c in chunks) or 1
+        image_clips = []
+
         update_job_progress(f"Generating {len(chunks)} post images...")
         for i, chunk in enumerate(chunks):
-            chunk_duration = (len(chunk) / total_chars) * full_audio_clip.duration if total_chars > 0 else full_audio_clip.duration
+            chunk_duration = (len(chunk) / total_chars) * full_audio_clip.duration
             image_path = create_reddit_post_image(reddit_data, chunk, i + 1)
             temp_files.append(image_path); image_clips.append(ImageClip(image_path).set_duration(chunk_duration))
 
