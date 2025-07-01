@@ -10,7 +10,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from rq import Queue
 import redis
 
-# Import the premium styles set from tasks
+# This import will now work because tasks.py will be correct.
 from tasks import PREMIUM_STYLES
 
 # --- Configuration & Initialization ---
@@ -56,8 +56,7 @@ async def read_pricing(request: Request, user: dict = Depends(get_user)):
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
-    # Make sure you have a small .ico file in your static directory
-    return FileResponse(os.path.join("static", "favicon.ico"))
+    return FileResponse(os.path.join(os.path.dirname(__file__), "static", "favicon.ico"))
 
 # --- Authentication Routes ---
 @app.get('/login')
