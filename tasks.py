@@ -3,18 +3,15 @@ import requests
 import cloudinary
 import cloudinary.uploader
 from moviepy.editor import *
-import PIL.Image
-from PIL import Image, ImageDraw, ImageFont
 from rq import get_current_job
 import textwrap
 import time
 from jinja2 import Environment, FileSystemLoader
 
+# This hotfix is still necessary
+import PIL.Image
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 # --- CONFIGURATION (Complete and Final) ---
 HCTI_API_USER_ID = os.getenv("HCTI_USER_ID")
@@ -36,7 +33,6 @@ SUBTITLE_STYLES = {
 PREMIUM_STYLES = {"glow_purple", "valorant", "comic_book", "professional", "horror", "retro_wave", "fire", "ice"}
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq", "reddit": "jpuuy9amUxVn651Jjmtq"}
-CHARACTER_IMAGE_PATHS = {"peter": os.path.join(STATIC_DIR, "peter.png"), "brian": os.path.join(STATIC_DIR, "brian.png")}
 BACKGROUND_VIDEO_URLS = {
     "minecraft_parkour1": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041495/hcipgj40g2rkujvkr5vi.mp4",
     "minecraft_parkour2": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041842/lth6r8frjh29qobragsh.mp4",
@@ -44,7 +40,6 @@ BACKGROUND_VIDEO_URLS = {
     "subway_surfers2": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751043573/lbxmatbcaroagjnqaf58.mp4"
 }
 cloudinary.config(cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"), api_key=os.getenv("CLOUDINARY_API_KEY"), api_secret=os.getenv("CLOUDINARY_API_SECRET"), secure=True)
-
 template_env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 
 # --- HELPER FUNCTIONS ---
@@ -73,9 +68,14 @@ def create_reddit_post_image_via_api(data):
     template = template_env.get_template('reddit_template.html')
     icon_url = "https://i.imgur.com/Kq4g5tW.png"; tick_url = "https://i.imgur.com/3ZJ7kMh.png"
     likes_icon_url = "https://i.imgur.com/eYn0m6a.png"; comments_icon_url = "https://i.imgur.com/s273I29.png"
+    
     html = template.render(
-        subreddit=data['subreddit'], username=data['username'], title=data['title'],
-        upvotes=format_count(data['upvotes']), comments=format_count(data['comments']),
+        subreddit=data.get('subreddit', 'r/stories'), 
+        username=data.get('username', 'u/Anonymous'), 
+        title=data.get('title', ''), 
+        body=data.get('body', ''),
+        upvotes=format_count(data.get('upvotes', '99+')), 
+        comments=format_count(data.get('comments', '99+')),
         icon_url=icon_url, tick_url=tick_url, likes_icon_url=likes_icon_url, comments_icon_url=comments_icon_url
     )
     api_data = {'html': html, 'google_fonts': 'Inter'}
@@ -110,7 +110,6 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
         background_clip = VideoFileClip(temp_bg_path).set_duration(total_duration)
 
         update_job_progress("Generating post image...")
-        # --- THE FIX: Pass the entire reddit_data dictionary ---
         image_path = create_reddit_post_image_via_api(reddit_data)
         temp_files.append(image_path)
         scene1_clip = ImageClip(image_path).set_duration(title_audio_clip.duration).resize(width=1000).set_position('center')
