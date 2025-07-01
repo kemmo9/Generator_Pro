@@ -1,10 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Creepster&family=Audiowide&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-    --bg-color: #121212; --surface-color: #1e1e1e; --primary-color: #bb86fc;
-    --text-color: #e0e0e0; --text-secondary: #a0a0b0; --border-color: #2c2c2c;
-    --secondary-color: #03dac6; /* Added for the gradient button */
+    --bg-color: #121212; 
+    --surface-color: #1e1e1e; 
+    --primary-color: #bb86fc;
+    --secondary-color: #03dac6;
+    --text-color: #e0e0e0; 
+    --text-secondary: #a0a0b0; 
+    --border-color: #2c2c2c;
 }
+
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-color);
@@ -13,54 +18,75 @@ body {
     padding: 2rem;
     padding-bottom: 100px;
 }
+
 .site-container {
     max-width: 960px;
     margin: 0 auto;
 }
 
-/* --- DESKTOP HEADER (Visible on desktop) --- */
+/* --- DESKTOP HEADER (Matches your screenshot) --- */
 .desktop-header {
     display: block;
     position: relative;
     text-align: center;
     padding: 1rem 0;
-    margin-bottom: 2rem;
+    margin-bottom: 3rem;
+    margin-top: 1rem;
 }
+
 .desktop-header h1 {
-    font-size: 2.5rem;
+    font-size: 2.8rem;
     font-weight: 700;
-    margin: 0 0 1.5rem 0;
+    margin: 0 0 1rem 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
 }
-.desktop-header h1 i { color: var(--primary-color); }
+
+.desktop-header h1 .fa-bolt {
+    color: var(--primary-color);
+}
+
 .desktop-header .auth-buttons {
     position: absolute;
     right: 0;
     top: 0;
 }
+
 .desktop-header .nav-menu {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 2rem;
+    gap: 2.5rem;
     list-style: none;
     padding: 0;
     margin: 0;
 }
+
 .nav-menu a {
     color: var(--text-secondary);
     text-decoration: none;
     font-weight: 500;
     padding: 0.5rem;
     transition: color 0.3s;
+    font-size: 1.1rem;
 }
-.nav-menu a:hover, .nav-menu a.active { color: white; }
-.nav-menu a.active { font-weight: 600; color: var(--primary-color); }
+
+.nav-menu a:hover {
+    color: white;
+}
+
+.nav-menu a.active {
+    font-weight: 600;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+}
 
 .nav-button {
     background-color: var(--primary-color);
     color: #121212;
     border: none;
-    padding: 0.6rem 1.2rem;
+    padding: 0.6rem 1.5rem;
     border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
@@ -68,55 +94,172 @@ body {
     display: inline-block;
 }
 
-.mobile-header, .mobile-nav { display: none; } /* Hide mobile elements by default */
+.mobile-header, .mobile-nav {
+    display: none;
+}
 
 /* --- EDITOR & FORM STYLES --- */
 .editor-container {
-    background-color: var(--surface-color);
-    padding: 2rem 2.5rem;
-    border-radius: 12px;
+    background-color: transparent;
+    padding: 0;
 }
-.step-title { font-weight: 600; margin-top: 3rem; margin-bottom: 1.5rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
-.selector-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-.option-box { border: 2px solid var(--border-color); background-color: var(--surface-color); border-radius: 8px; cursor: pointer; transition: border-color 0.2s; padding: 0.5rem; text-align: center; display: flex; flex-direction: column; position: relative; }
-.option-box.selected { border-color: var(--primary-color); }
-.option-box img { width: 100%; flex-grow: 1; object-fit: cover; border-radius: 6px; aspect-ratio: 9/16; }
-.option-box .label { font-weight: 500; margin-top: 0.75rem; font-size: 0.9rem; }
-.pro-badge { position: absolute; top: 8px; right: 8px; background: var(--primary-color); color: #121212; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 6px; }
-select, input, textarea { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-size: 1rem; width: 100%; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-textarea { min-height: 120px; resize: vertical; }
-.dialogue-box, .reddit-editor-form { border: 1px solid var(--border-color); background-color: var(--bg-color); border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;}
-.dialogue-row { display: grid; grid-template-columns: 1fr 1fr 3fr auto; gap: 1rem; align-items: center; }
-.dialogue-row .remove-btn { background: #e94560; border: none; border-radius: 50%; width: 32px; height: 32px; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0;}
 
-/* The restored, stylish two-button grid layout */
+.step-title {
+    font-weight: 600;
+    margin-top: 3rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.step-title .accent-text {
+    color: var(--primary-color);
+}
+
+.selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.option-box {
+    border: 2px solid var(--border-color);
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    padding: 0.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.option-box.selected {
+    border-color: var(--primary-color);
+}
+
+.option-box img {
+    width: 100%;
+    flex-grow: 1;
+    object-fit: cover;
+    border-radius: 6px;
+    aspect-ratio: 9/16;
+}
+
+.option-box .label {
+    font-weight: 500;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.subtitle-cycler-container {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+}
+
+.subtitle-preview-box {
+    flex-grow: 1;
+    border: 2px solid var(--border-color);
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    padding: 0.8rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#cycle-subtitle-btn {
+    background-color: #3a3a5a;
+    flex-shrink: 0;
+}
+
+select, input, textarea {
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.dialogue-box, .reddit-editor-form {
+    border: 1px solid var(--border-color);
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dialogue-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 3fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.dialogue-row .remove-btn {
+    background: #e94560;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-weight: bold;
+    cursor: pointer;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* --- THE RESTORED BUTTON LAYOUT --- */
 .controls {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
-    margin-top: 1.5rem;
+    margin-top: 2rem;
 }
+
 .controls button {
     padding: 0.8rem 1.5rem;
     font-size: 1.1rem;
     font-weight: 600;
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     width: 100%;
-    transition: transform 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
+
 .controls button:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
+
 #add-dialogue-btn {
     background-color: #3a3a5a;
 }
+
 #generate-btn {
     background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
     color: #121212;
@@ -126,15 +269,18 @@ textarea { min-height: 120px; resize: vertical; }
 .spinner { animation: spin 1s linear infinite; }
 .status { text-align: center; margin-top: 1.5rem; font-weight: 500; min-height: 24px; color: var(--text-secondary); }
 
-/* Subtitle Previews */
-.subtitle-preview { padding: 1rem; font-size: 1.2rem; }
-/* ... (all your subtitle preview styles) ... */
-
-/* --- MOBILE OVERHAUL (Only affects screens < 768px) --- */
+/* --- MOBILE OVERHAUL --- */
 @media (max-width: 768px) {
-    body { padding: 1rem; padding-bottom: 100px; }
-    .desktop-header { display: none; }
-    .mobile-header, .mobile-nav { display: flex; }
+    body {
+        padding: 1rem;
+        padding-bottom: 100px;
+    }
+    .desktop-header {
+        display: none;
+    }
+    .mobile-header, .mobile-nav {
+        display: flex;
+    }
     .mobile-header {
         justify-content: center;
         text-align: center;
@@ -162,9 +308,16 @@ textarea { min-height: 120px; resize: vertical; }
         gap: 0.25rem;
         font-size: 0.8rem;
     }
-    .mobile-nav a.active { color: var(--primary-color); }
-    .mobile-nav .nav-button { padding: 0.5rem 1rem; font-size: 0.9rem; }
-    .editor-container { padding: 1rem; }
+    .mobile-nav a.active {
+        color: var(--primary-color);
+    }
+    .mobile-nav .nav-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    .editor-container {
+        padding: 0;
+    }
     .selector-grid {
         display: flex;
         overflow-x: auto;
@@ -175,13 +328,26 @@ textarea { min-height: 120px; resize: vertical; }
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
-    .selector-grid::-webkit-scrollbar { display: none; }
+    .selector-grid::-webkit-scrollbar {
+        display: none;
+    }
     .selector-grid .option-box {
         scroll-snap-align: start;
         flex-shrink: 0;
         width: 45%;
     }
-    .dialogue-row { grid-template-columns: 1fr; gap: 0.75rem; }
-    .dialogue-row .remove-btn { width: auto; margin: 0 auto; border-radius: 50%; width: 32px; height: 32px; }
-    .controls { grid-template-columns: 1fr; }
+    .dialogue-row {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    .dialogue-row .remove-btn {
+        width: auto;
+        margin: 0 auto;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+    }
+    .controls {
+        grid-template-columns: 1fr;
+    }
 }
