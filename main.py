@@ -1,6 +1,5 @@
 import os
 import json
-import stripe
 from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, Request, Body, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
@@ -10,7 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from rq import Queue
 import redis
 
-# This import will now work because tasks.py will be correct.
+# This is now the only import needed from tasks.py for this feature
 from tasks import PREMIUM_STYLES
 
 # --- Configuration & Initialization ---
@@ -20,8 +19,7 @@ app.add_middleware(
     SessionMiddleware, 
     secret_key=os.getenv("APP_SECRET_KEY", "a_very_long_and_super_secret_string_for_local_testing")
 )
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+
 AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
 AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID')
 AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET')
@@ -38,7 +36,7 @@ oauth.register(
     client_id=AUTH0_CLIENT_ID,
     client_secret=AUTH0_CLIENT_SECRET,
     server_metadata_url=f"https://{AUTH0_DOMAIN}/.well-known/openid-configuration",
-    client_kwargs={'scope': 'openid profile email update:users'}
+    client_kwargs={'scope': 'openid profile email'}
 )
 
 async def get_user(request: Request):
@@ -51,8 +49,8 @@ async def read_root(request: Request, user: dict = Depends(get_user)):
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def read_pricing(request: Request, user: dict = Depends(get_user)):
-    stripe_publishable_key = os.getenv("STRIPE_PUBLISHABLE_KEY")
-    return templates.TemplateResponse("pricing.html", {"request": request, "user": user, "stripe_publishable_key": stripe_publishable_key})
+    # This page will exist but have no payment logic for now
+    return templates.TemplateResponse("pricing.html", {"request": request, "user": user})
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
@@ -77,32 +75,15 @@ async def callback(request: Request):
     return RedirectResponse(url="/")
 
 # --- API Routes ---
-@app.post("/api/create-checkout-session")
-async def create_checkout_session(request: Request, payload: dict = Body(...), user: dict = Depends(get_user)):
-    if not user: raise HTTPException(status_code=401, detail="You must be logged in to subscribe.")
-    try:
-        checkout_session = stripe.checkout.Session.create(
-            line_items=[{'price': payload.get("price_id"), 'quantity': 1}],
-            mode='subscription',
-            success_url="https://www.makeaclip.pro/pricing?checkout_status=success",
-            cancel_url="https://www.makeaclip.pro/pricing?checkout_status=cancel",
-            client_reference_id=user['sub']
-        )
-        return JSONResponse({'id': checkout_session.id})
-    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/stripe-webhook")
-async def stripe_webhook(request: Request):
-    # TODO: Finalize this logic to update Auth0 metadata
-    return JSONResponse({'status': 'success'})
-
 @app.post("/api/generate-video")
 async def queue_video_task(request: Request, payload: dict = Body(...), user: dict = Depends(get_user)):
     if not user: raise HTTPException(status_code=401, detail="Not authenticated")
     
     options_data = payload.get("options", {})
     selected_style = options_data.get("subtitleStyle")
-    user_tier = user.get("https://makeaclip.pro/tier", "free")
+    
+    # For now, we assume everyone is a "pro" user to test premium styles
+    user_tier = "pro" 
 
     if selected_style in PREMIUM_STYLES and user_tier == "free":
         raise HTTPException(status_code=403, detail=f"'{selected_style}' is a premium style. Please upgrade.")
