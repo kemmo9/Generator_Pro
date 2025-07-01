@@ -17,9 +17,7 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 # =========================================================================================
 # --- THE DEFINITIVE FIX: Absolute Path Discovery ---
 # This code block determines the absolute path to the directory where this script lives.
-# It then uses this path to locate the 'static' folder.
-# This is a robust method that works on any system, including Render's, and
-# permanently solves the "OSError: cannot open resource" bug for all assets.
+# It then uses this path to locate the 'static' folder. This is the robust solution.
 # =========================================================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -44,6 +42,7 @@ PREMIUM_STYLES = {"glow_purple", "valorant", "comic_book", "professional", "horr
 # --- CONFIGURATION ---
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq"}
+# Use the absolute path for assets loaded by the worker
 CHARACTER_IMAGE_PATHS = {"peter": os.path.join(STATIC_DIR, "peter.png"), "brian": os.path.join(STATIC_DIR, "brian.png")}
 BACKGROUND_VIDEO_URLS = {
     "minecraft_parkour1": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041495/hcipgj40g2rkujvkr5vi.mp4",
