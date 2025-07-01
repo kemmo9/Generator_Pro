@@ -46,9 +46,23 @@
             </div>
 
             <p class="step-title"><span class="accent-text">Step 3:</span> Choose Subtitles</p>
-            <div class="subtitle-cycler-container" id="subtitle-selector" data-style="standard">
-                <div class="subtitle-preview-box" id="subtitle-preview-box">Standard Style</div>
-                <button id="cycle-subtitle-btn" class="nav-button"><i class="fa-solid fa-arrow-right"></i> Next Style</button>
+            <div class="subtitle-selector-wrapper">
+                <button id="scroll-left" class="scroll-btn"><</button>
+                <div class="selector-grid" id="subtitle-selector">
+                    <div class="option-box selected" data-style="standard"><p class="subtitle-preview standard-preview">Standard</p></div>
+                    <div class="option-box" data-style="yellow"><p class="subtitle-preview yellow-preview">Yellow</p></div>
+                    <div class="option-box" data-style="meme"><p class="subtitle-preview meme-preview">Meme</p></div>
+                    <div class="option-box" data-style="minimalist"><p class="subtitle-preview minimalist-preview">Minimalist</p></div>
+                    <div class="option-box" data-style="glow_purple"><p class="subtitle-preview glow_purple-preview">Glow</p><span class="pro-badge">PRO</span></div>
+                    <div class="option-box" data-style="valorant"><p class="subtitle-preview valorant-preview">Valorant</p><span class="pro-badge">PRO</span></div>
+                    <div class="option-box" data-style="comic_book"><p class="subtitle-preview comic_book-preview">Comic</p><span class="pro-badge">PRO</span></div>
+                    <div class="option-box" data-style="professional"><p class="subtitle-preview professional-preview">Pro</p><span class="pro-badge">PRO</span></div>
+                    <div class="option-box" data-style="horror"><p class="subtitle-preview horror-preview">Horror</p><span class="pro-badge">PRO</span></div>
+                    <div class="option-box" data-style="retro_wave"><p class="subtitle-preview retro_wave-preview">Retro</p><span class="pro-badge">PRO</span></div>
+                    <div class="option-box" data-style="fire"><p class="subtitle-preview fire-preview">Fire</p><span class="pro-badge">PRO</span></div>
+                    <div class="option-box" data-style="ice"><p class="subtitle-preview ice-preview">Ice</p><span class="pro-badge">PRO</span></div>
+                </div>
+                <button id="scroll-right" class="scroll-btn">></button>
             </div>
 
             <p class="step-title"><span class="accent-text">Step 4:</span> Write Your Script</p>
@@ -72,7 +86,6 @@
         </main>
     </div>
 
-    <!-- Mobile Navigation Bar -->
     <nav class="mobile-nav">
         <a href="/" class="active"><i class="fa-solid fa-wand-magic-sparkles"></i> Editor</a>
         <a href="/pricing"><i class="fa-solid fa-tags"></i> Pricing</a>
@@ -95,7 +108,7 @@
             const dialogueEditor = document.getElementById('dialogue-editor');
             const redditEditor = document.getElementById('reddit-editor');
             const addDialogueBtn = document.getElementById('add-dialogue-btn');
-
+            
             document.querySelectorAll('#template-selector .option-box').forEach(box => {
                 box.addEventListener('click', () => {
                     const template = box.dataset.template;
@@ -105,26 +118,24 @@
                 });
             });
 
-            // Subtitle Cycler Logic
-            const subtitleStyles = [
-                { key: 'standard', name: 'Standard Style' },
-                { key: 'yellow', name: 'Yellow Style' },
-                { key: 'meme', name: 'Meme Style' },
-                { key: 'glow_purple', name: 'Glow Purple (PRO)' }
-            ];
-            let currentSubtitleIndex = 0;
             const subtitleSelector = document.getElementById('subtitle-selector');
-            const subtitlePreviewBox = document.getElementById('subtitle-preview-box');
-            const cycleSubtitleBtn = document.getElementById('cycle-subtitle-btn');
-
-            cycleSubtitleBtn.addEventListener('click', () => {
-                currentSubtitleIndex = (currentSubtitleIndex + 1) % subtitleStyles.length;
-                const newStyle = subtitleStyles[currentSubtitleIndex];
-                subtitlePreviewBox.textContent = newStyle.name;
-                subtitleSelector.dataset.style = newStyle.key;
-            });
+            const scrollLeftBtn = document.getElementById('scroll-left');
+            const scrollRightBtn = document.getElementById('scroll-right');
             
-            // Generate Button Logic
+            if (scrollLeftBtn) {
+                scrollLeftBtn.addEventListener('click', () => {
+                    const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
+                    subtitleSelector.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                });
+            }
+
+            if (scrollRightBtn) {
+                scrollRightBtn.addEventListener('click', () => {
+                    const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
+                    subtitleSelector.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                });
+            }
+            
             const generateBtn = document.getElementById('generate-btn');
             generateBtn.addEventListener('click', async () => {
                 if (!IS_AUTHENTICATED) { window.location.href = '/login'; return; }
@@ -144,18 +155,14 @@
                     dataPayload = { dialogue_data: Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, imagePlacement: r.querySelector('.placement-select').value, text: r.querySelector('.dialogue-input').value })).filter(l => l.text) };
                     if (dataPayload.dialogue_data.length === 0) {
                         alert('Please enter at least one line of dialogue.');
-                        generateBtn.disabled = false;
-                        generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
-                        generateBtnText.textContent = 'Generate Video';
+                        generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                         return;
                     }
                 } else {
                     dataPayload = { reddit_data: { title: document.getElementById('reddit-title').value, body: document.getElementById('reddit-body').value } };
                     if (!dataPayload.reddit_data.title) {
                         alert('Please enter a Reddit title.');
-                        generateBtn.disabled = false;
-                        generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
-                        generateBtnText.textContent = 'Generate Video';
+                        generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                         return;
                     }
                 }
@@ -163,7 +170,7 @@
                 const optionsPayload = { 
                     template: activeTemplate, 
                     backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, 
-                    subtitleStyle: subtitleSelector.dataset.style 
+                    subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style 
                 };
                 const payload = { ...dataPayload, options: optionsPayload };
 
@@ -171,7 +178,7 @@
                     const response = await fetch('/api/generate-video', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
                     if (!response.ok) { const err = await response.json(); throw new Error(err.detail || 'Failed to start job.'); }
                     const data = await response.json();
-                    statusArea.textContent = `Job queued! Polling for status...`;
+                    statusArea.textContent = `Job queued! Polling...`;
                     
                     const intervalId = setInterval(async () => {
                         const statusResponse = await fetch(`/api/job-status/${data.job_id}`);
@@ -184,9 +191,9 @@
                             generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
                             generateBtnText.textContent = 'Generate Video';
                             if (statusData.status === 'finished') {
-                                statusArea.innerHTML = `<p>Video is ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Your Clip</a>`;
+                                statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Clip</a>`;
                             } else {
-                                statusArea.textContent = `Job failed: ${statusData.progress}`;
+                                statusArea.textContent = `Failed: ${statusData.progress}`;
                             }
                         }
                     }, 3000);
@@ -198,7 +205,6 @@
                 }
             });
             
-            // General UI Initialization Logic
             const dialogueContainer = document.getElementById('dialogue-container');
             const rowTemplate = document.getElementById('dialogue-row-template');
             const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
@@ -207,13 +213,16 @@
             dialogueContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove();
             });
-            document.querySelectorAll('#template-selector .option-box, #background-selector .option-box').forEach(box => {
-                box.addEventListener('click', (event) => {
-                    const grid = event.target.closest('.selector-grid');
+
+            document.querySelectorAll('.selector-grid').forEach(grid => {
+                grid.addEventListener('click', (event) => {
+                    const selectedOption = event.target.closest('.option-box');
+                    if (!selectedOption) return;
                     grid.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
-                    event.target.closest('.option-box').classList.add('selected');
+                    selectedOption.classList.add('selected');
                 });
             });
+
             document.querySelector('#template-selector .option-box.selected').dispatchEvent(new Event('click'));
         });
     </script>
