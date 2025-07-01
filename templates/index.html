@@ -5,22 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Make a Clip</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
     <div class="site-container">
         <!-- Desktop Header -->
         <header class="desktop-header">
-            <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
-            <ul class="nav-menu">
-                <li><a href="/" class="active">Editor</a></li>
-                <li><a href="/pricing">Pricing</a></li>
-            </ul>
             <div class="auth-buttons">
                 {% if user %}<a href="/logout" class="nav-button">Log Out</a>{% else %}<a href="/login" class="nav-button">Log In</a>{% endif %}
             </div>
+            <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
+            <ul class="nav-menu">
+                <li><a href="#">Text to Speech</a></li>
+                <li><a href="/" class="active">Viral Editor</a></li>
+                <li><a href="/pricing">Pricing</a></li>
+            </ul>
         </header>
 
         <!-- Mobile Header -->
@@ -52,6 +52,7 @@
                     <div class="option-box selected" data-style="standard"><p class="subtitle-preview standard-preview">Standard</p></div>
                     <div class="option-box" data-style="yellow"><p class="subtitle-preview yellow-preview">Yellow</p></div>
                     <div class="option-box" data-style="meme"><p class="subtitle-preview meme-preview">Meme</p></div>
+                    <div class="option-box" data-style="glow_purple"><p class="subtitle-preview glow_purple-preview">Glow <span class="pro-badge">PRO</span></p></div>
                 </div>
                 <button id="scroll-right" class="scroll-btn">></button>
             </div>
@@ -68,31 +69,24 @@
                             <input type="text" id="reddit-username" name="username" value="u/Anonymous">
                         </div>
                         <input type="text" id="reddit-title" name="title" placeholder="Reddit Post Title...">
+                        <textarea id="reddit-body" name="body" rows="6" placeholder="Enter the story body for the voiceover..."></textarea>
                         <div class="input-grid">
-                            <input type="text" id="reddit-upvotes" name="upvotes" value="99+">
-                            <input type="text" id="reddit-comments" name="comments" value="99+">
+                            <input type="text" id="reddit-upvotes" name="upvotes" value="21.4k">
+                            <input type="text" id="reddit-comments" name="comments" value="1.8k">
+                        </div>
+                        <div class="input-grid">
+                            <select id="reddit-position">
+                                <option value="top_left">Top Left</option>
+                                <option value="center">Center</option>
+                                <option value="top_center">Top Center</option>
+                            </select>
+                            <select id="reddit-size">
+                                <option value="800">Small</option>
+                                <option value="1000" selected>Medium</option>
+                                <option value="1200">Large</option>
+                            </select>
                         </div>
                     </form>
-                    <p class="step-title" style="margin-top: 2rem; font-size: 1rem; text-align: center;">Live Preview</p>
-                    <div id="reddit-post-preview-container">
-                        <div id="reddit-post-preview">
-                            <div class="post-header">
-                                <img src="https://i.imgur.com/Kq4g5tW.png" class="post-icon">
-                                <div class="post-meta">
-                                    <span class="post-subreddit">r/askreddit</span>
-                                    <span class="post-username">u/Anonymous</span>
-                                </div>
-                                <img src="https://i.imgur.com/3ZJ7kMh.png" class="post-tick">
-                            </div>
-                            <h1 class="post-title">Reddit Post Title...</h1>
-                            <div class="post-footer">
-                                <img src="https://i.imgur.com/eYn0m6a.png" class="footer-icon">
-                                <span class="post-upvotes">99+</span>
-                                <img src="https://i.imgur.com/s273I29.png" class="footer-icon" style="margin-left: 25px;">
-                                <span class="post-comments">99+</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -136,26 +130,28 @@
                 });
             });
 
-            const redditForm = document.getElementById('reddit-form');
-            const preview = document.getElementById('reddit-post-preview');
-            function updatePreview() {
-                preview.querySelector('.post-subreddit').textContent = document.getElementById('reddit-subreddit').value;
-                preview.querySelector('.post-username').textContent = document.getElementById('reddit-username').value;
-                const title = document.getElementById('reddit-title').value;
-                preview.querySelector('.post-title').textContent = title ? title : "Reddit Post Title...";
-                preview.querySelector('.post-upvotes').textContent = document.getElementById('reddit-upvotes').value;
-                preview.querySelector('.post-comments').textContent = document.getElementById('reddit-comments').value;
-            }
-            redditForm.addEventListener('input', updatePreview);
-            updatePreview();
+            const subtitleSelector = document.getElementById('subtitle-selector');
+            const scrollLeftBtn = document.getElementById('scroll-left');
+            const scrollRightBtn = document.getElementById('scroll-right');
 
+            if (scrollLeftBtn && scrollRightBtn) {
+                scrollLeftBtn.addEventListener('click', () => {
+                    const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
+                    subtitleSelector.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                });
+                scrollRightBtn.addEventListener('click', () => {
+                    const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
+                    subtitleSelector.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                });
+            }
+            
             const generateBtn = document.getElementById('generate-btn');
             generateBtn.addEventListener('click', async () => {
                 if (!IS_AUTHENTICATED) { window.location.href = '/login'; return; }
                 
-                generateBtn.disabled = true;
                 const generateBtnIcon = generateBtn.querySelector('.icon');
                 const generateBtnText = generateBtn.querySelector('.text');
+                generateBtn.disabled = true;
                 generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
                 generateBtnText.textContent = 'Generating...';
                 const statusArea = document.getElementById('status-area');
@@ -165,13 +161,16 @@
                 let dataPayload;
 
                 if (activeTemplate === 'reddit') {
-                    statusArea.textContent = 'Capturing Reddit post image...';
-                    const canvas = await html2canvas(document.getElementById('reddit-post-preview'), { useCORS: true });
-                    const redditImageData = canvas.toDataURL('image/png');
                     dataPayload = {
                         reddit_data: {
+                            subreddit: document.getElementById('reddit-subreddit').value,
+                            username: document.getElementById('reddit-username').value,
                             title: document.getElementById('reddit-title').value,
-                            image_data_url: redditImageData 
+                            body: document.getElementById('reddit-body').value,
+                            upvotes: document.getElementById('reddit-upvotes').value,
+                            comments: document.getElementById('reddit-comments').value,
+                            position: document.getElementById('reddit-position').value,
+                            size: parseInt(document.getElementById('reddit-size').value, 10)
                         }
                     };
                     if (!dataPayload.reddit_data.title) {
