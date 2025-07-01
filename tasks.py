@@ -8,16 +8,17 @@ from PIL import Image, ImageDraw, ImageFont
 from rq import get_current_job
 import textwrap
 import time
-from jinja2 import Environment, FileSystemLoader # <-- THIS IS THE MISSING LINE
+from jinja2 import Environment, FileSystemLoader
 
-# This ensures compatibility with newer versions of the Pillow library
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 # --- CONFIGURATION (Complete and Final) ---
 HCTI_API_USER_ID = os.getenv("HCTI_USER_ID")
 HCTI_API_KEY = os.getenv("HCTI_API_KEY")
-
 SUBTITLE_STYLES = {
     "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
     "yellow": {"fontsize": 45, "color": "#FFD700", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
@@ -35,10 +36,7 @@ SUBTITLE_STYLES = {
 PREMIUM_STYLES = {"glow_purple", "valorant", "comic_book", "professional", "horror", "retro_wave", "fire", "ice"}
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq", "reddit": "jpuuy9amUxVn651Jjmtq"}
-CHARACTER_IMAGE_PATHS = {
-    "peter": os.path.join(os.path.dirname(__file__), "static", "peter.png"),
-    "brian": os.path.join(os.path.dirname(__file__), "static", "brian.png")
-}
+CHARACTER_IMAGE_PATHS = {"peter": os.path.join(STATIC_DIR, "peter.png"), "brian": os.path.join(STATIC_DIR, "brian.png")}
 BACKGROUND_VIDEO_URLS = {
     "minecraft_parkour1": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041495/hcipgj40g2rkujvkr5vi.mp4",
     "minecraft_parkour2": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041842/lth6r8frjh29qobragsh.mp4",
@@ -47,22 +45,18 @@ BACKGROUND_VIDEO_URLS = {
 }
 cloudinary.config(cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"), api_key=os.getenv("CLOUDINARY_API_KEY"), api_secret=os.getenv("CLOUDINARY_API_SECRET"), secure=True)
 
-# Set up Jinja2 to find the new HTML template
 template_env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 
 # --- HELPER FUNCTIONS ---
 def update_job_progress(message: str):
     job = get_current_job(); job.meta['progress'] = message; job.save_meta() if job else None; print(f"Job Progress: {message}")
-
 def download_file(url, local_filename):
     with requests.get(url, stream=True) as r: r.raise_for_status(); open(local_filename, 'wb').write(r.content)
     return local_filename
-
 def generate_audio_elevenlabs(text, filename, voice_id):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {"Accept": "audio/mpeg", "Content-Type": "application/json", "xi-api-key": ELEVENLABS_API_KEY}
     data = {"text": text, "model_id": "eleven_multilingual_v2"}; r=requests.post(url, json=data, headers=headers); r.raise_for_status(); open(filename, "wb").write(r.content)
-
 def format_count(num_str):
     try:
         if isinstance(num_str, (int, float)): num = num_str
@@ -74,13 +68,13 @@ def format_count(num_str):
     except (ValueError, TypeError): return num_str
 
 # --- Reddit Image Generation ---
-def create_reddit_post_image_via_api(data, text_chunk, part_num):
+def create_reddit_post_image_via_api(data):
     job_id = get_current_job().id
     template = template_env.get_template('reddit_template.html')
     icon_url = "https://i.imgur.com/Kq4g5tW.png"; tick_url = "https://i.imgur.com/3ZJ7kMh.png"
     likes_icon_url = "https://i.imgur.com/eYn0m6a.png"; comments_icon_url = "https://i.imgur.com/s273I29.png"
     html = template.render(
-        subreddit=data['subreddit'], username=data['username'], title=data['title'], body=text_chunk,
+        subreddit=data['subreddit'], username=data['username'], title=data['title'],
         upvotes=format_count(data['upvotes']), comments=format_count(data['comments']),
         icon_url=icon_url, tick_url=tick_url, likes_icon_url=likes_icon_url, comments_icon_url=comments_icon_url
     )
@@ -88,7 +82,7 @@ def create_reddit_post_image_via_api(data, text_chunk, part_num):
     response = requests.post('https://hcti.io/v1/image', data=api_data, auth=(HCTI_API_USER_ID, HCTI_API_KEY))
     response.raise_for_status()
     image_url = response.json()['url']
-    image_filename = f"temp_reddit_frame_{job_id}_{part_num}.png"
+    image_filename = f"temp_reddit_frame_{job_id}.png"
     download_file(image_url, image_filename)
     return image_filename
 
@@ -116,15 +110,14 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
         background_clip = VideoFileClip(temp_bg_path).set_duration(total_duration)
 
         update_job_progress("Generating post image...")
-        # For this template, we create one image with the title, and no body text.
-        image_path = create_reddit_post_image_via_api(reddit_data, "", 1)
+        # --- THE FIX: Pass the entire reddit_data dictionary ---
+        image_path = create_reddit_post_image_via_api(reddit_data)
         temp_files.append(image_path)
         scene1_clip = ImageClip(image_path).set_duration(title_audio_clip.duration).resize(width=1000).set_position('center')
         
         scene2_clips = []
         if body_audio_clip:
             subtitle_style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"), SUBTITLE_STYLES["standard"])
-            # A simple implementation for subtitles. Can be improved with word-level timing.
             subtitles_clip = TextClip(body_text, **subtitle_style, size=(background_clip.w * 0.9, None), method='caption').set_position('center').set_duration(body_audio_clip.duration).set_start(title_audio_clip.duration)
             scene2_clips.append(subtitles_clip)
 
@@ -158,7 +151,7 @@ def create_video_task(dialogue_data: list, options: dict):
         video_clips = []; current_time = 0; update_job_progress("Compositing video...")
         selected_style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"))
         for i, clip_data in enumerate(dialogue_data):
-            char_path = CHARACTER_IMAGE_PATHS[clip_data["character"]]
+            char_path = os.path.join(os.path.dirname(__file__), "static", f"{clip_data['character']}.png")
             img = ImageClip(char_path).set_duration(audio_clips[i].duration).set_start(current_time).set_position(clip_data.get("imagePlacement", "center")).resize(height=300)
             txt = TextClip(clip_data["text"], **selected_style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(("center", 0.8), relative=True)
             video_clips.extend([img, txt]); current_time += audio_clips[i].duration
