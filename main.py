@@ -10,14 +10,13 @@ from starlette.middleware.sessions import SessionMiddleware
 from rq import Queue
 import redis
 
+# Import the premium styles set from tasks
 from tasks import PREMIUM_STYLES
 
 # --- Configuration & Initialization ---
 app = FastAPI()
 
 # THIS IS THE CRITICAL FIX for Render startup issues.
-# It provides a default key so the server can always start.
-# You MUST set a real, secure key in your Render Environment Variables for production.
 app.add_middleware(
     SessionMiddleware, 
     secret_key=os.getenv("APP_SECRET_KEY", "a_very_long_and_super_secret_string_for_local_testing")
@@ -72,7 +71,6 @@ async def read_pricing(request: Request, user: dict = Depends(get_user)):
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     """Serves a blank icon to prevent 404 errors in the browser console."""
-    # Ensure you have a blank file named 'favicon.ico' in your 'static' folder
     return FileResponse(os.path.join("static", "favicon.ico"))
 
 # --- Authentication Routes ---
@@ -93,7 +91,7 @@ async def logout(request: Request):
 async def callback(request: Request):
     """Handles the redirect from Auth0 after a successful login."""
     token = await oauth.auth0.authorize_access_token(request)
-    request.session['user'] = token['userinfo'] # Store user data in the session cookie
+    request.session['user'] = token['userinfo']
     return RedirectResponse(url="/")
 
 # --- API Routes ---
@@ -109,7 +107,7 @@ async def create_checkout_session(request: Request, payload: dict = Body(...), u
             mode='subscription',
             success_url="https://www.makeaclip.pro/pricing?checkout_status=success",
             cancel_url="https://www.makeaclip.pro/pricing?checkout_status=cancel",
-            client_reference_id=user['sub'] # Links this checkout to the Auth0 user ID
+            client_reference_id=user['sub']
         )
         return JSONResponse({'id': checkout_session.id})
     except Exception as e:
@@ -144,10 +142,14 @@ async def queue_video_task(request: Request, payload: dict = Body(...), user: di
     
     options_data = payload.get("options", {})
     selected_style = options_data.get("subtitleStyle")
-    user_tier = user.get("https://makeaclip.pro/tier", "free")
+    # This is the placeholder for user tier logic until the webhook is complete.
+    user_tier = user.get("https://makeaclip.pro/tier", "free") 
 
     if selected_style in PREMIUM_STYLES and user_tier == "free":
-        raise HTTPException(status_code=403, detail="This is a premium style. Please upgrade your plan.")
+        raise HTTPException(
+            status_code=403, 
+            detail=f"'{selected_style}' is a premium style. Please upgrade to a Pro or Platinum plan on the pricing page."
+        )
     
     template = options_data.get("template")
     if template == "reddit":
