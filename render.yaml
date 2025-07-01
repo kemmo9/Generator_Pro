@@ -1,4 +1,5 @@
 services:
+  # 1. The Web Service
   - type: web
     name: ai-video-web
     env: python
@@ -16,12 +17,6 @@ services:
         sync: false
       - key: APP_SECRET_KEY
         sync: false
-      - key: STRIPE_PUBLISHABLE_KEY
-        sync: false
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
@@ -35,10 +30,13 @@ services:
           type: redis
           name: ai-video-queue
           property: connectionString
+
+  # 2. The Background Worker
   - type: worker
     name: ai-video-worker
     env: python
     buildCommand: "pip install -r requirements.txt"
+    # --- THE FIX: This now points to the new worker script ---
     startCommand: "python worker.py"
     envVars:
       - key: PYTHON_VERSION
@@ -56,6 +54,8 @@ services:
           type: redis
           name: ai-video-queue
           property: connectionString
+
+  # 3. The Redis Queue
   - type: redis
     name: ai-video-queue
     plan: free
