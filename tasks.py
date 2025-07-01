@@ -16,6 +16,7 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
+# --- COMPLETE SUBTITLE STYLE & PREMIUM DEFINITIONS ---
 SUBTITLE_STYLES = {
     "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
     "yellow": {"fontsize": 45, "color": "#FFD700", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
@@ -30,7 +31,6 @@ SUBTITLE_STYLES = {
     "fire": {"fontsize": 50, "color": "#FFD700", "font": "Impact", "stroke_color": "#E25822", "stroke_width": 2.5},
     "ice": {"fontsize": 48, "color": "white", "font": "Arial-Bold", "stroke_color": "#00B4D8", "stroke_width": 2.5}
 }
-# --- THIS VARIABLE IS RESTORED ---
 PREMIUM_STYLES = {"glow_purple", "valorant", "comic_book", "professional", "horror", "retro_wave", "fire", "ice"}
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
@@ -103,7 +103,9 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
     update_job_progress("Initializing Reddit video..."); temp_files = []
     video_clips = []
     try:
-        story_text = reddit_data.get('body', ''); full_text_for_vo = f"{reddit_data['title']}. {story_text}"
+        story_text = reddit_data.get('body', '')
+        full_text_for_vo = f"{reddit_data['title']}. {story_text}"
+        
         update_job_progress("Generating voiceover..."); vo_filename = f"temp_vo_{get_current_job().id}.mp3"
         temp_files.append(vo_filename); generate_audio_elevenlabs(full_text_for_vo, vo_filename, VOICE_IDS.get("reddit"))
         full_audio_clip = AudioFileClip(vo_filename)
@@ -116,7 +118,9 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
         for i, chunk in enumerate(chunks):
             chunk_duration = (len(chunk) / total_chars) * full_audio_clip.duration
             image_path = create_reddit_post_image(reddit_data, chunk, i + 1)
-            temp_files.append(image_path); video_clips.append(ImageClip(image_path).set_duration(chunk_duration))
+            temp_files.append(image_path)
+            img_clip = ImageClip(image_path).set_duration(chunk_duration)
+            video_clips.append(img_clip)
 
         reddit_story_clip = concatenate_videoclips(video_clips, method="compose").set_position('center')
         update_job_progress("Downloading background...")
@@ -124,7 +128,8 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
         temp_bg_path = download_file(bg_url, f"temp_bg_{get_current_job().id}.mp4"); temp_files.append(temp_bg_path)
         background_clip = VideoFileClip(temp_bg_path).set_duration(full_audio_clip.duration)
         
-        update_job_progress("Compositing final video..."); final_video = CompositeVideoClip([background_clip, reddit_story_clip]).set_audio(full_audio_clip)
+        update_job_progress("Compositing final video...")
+        final_video = CompositeVideoClip([background_clip, reddit_story_clip]).set_audio(full_audio_clip)
         output_filename = f"final_reddit_{get_current_job().id}.mp4"; temp_files.append(output_filename)
         final_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", fps=24, logger='bar')
         
