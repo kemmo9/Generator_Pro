@@ -9,7 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from rq import Queue
 import redis
 
-# This is now the only import needed from tasks.py for this feature
+# This is now the only import needed from tasks.py
 from tasks import PREMIUM_STYLES
 
 # --- Configuration & Initialization ---
@@ -49,11 +49,12 @@ async def read_root(request: Request, user: dict = Depends(get_user)):
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def read_pricing(request: Request, user: dict = Depends(get_user)):
-    # This page will exist but have no payment logic for now
+    # Pricing page is simplified for now
     return templates.TemplateResponse("pricing.html", {"request": request, "user": user})
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
+    # Make sure you have committed favicon.ico to your git repo inside the 'static' folder
     return FileResponse(os.path.join(os.path.dirname(__file__), "static", "favicon.ico"))
 
 # --- Authentication Routes ---
@@ -82,7 +83,8 @@ async def queue_video_task(request: Request, payload: dict = Body(...), user: di
     options_data = payload.get("options", {})
     selected_style = options_data.get("subtitleStyle")
     
-    # For now, we assume everyone is a "pro" user to test premium styles
+    # For testing, we will treat everyone as a "pro" user to allow premium styles.
+    # We will replace this with real logic after the video generation is perfect.
     user_tier = "pro" 
 
     if selected_style in PREMIUM_STYLES and user_tier == "free":
