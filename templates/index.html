@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Make a Clip</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -52,7 +52,7 @@
                 <div id="reddit-editor" style="display: none;">
                     <form id="reddit-form" class="reddit-editor-form">
                         <div class="input-grid">
-                            <input type="text" id="reddit-subreddit" name="subreddit" value="r/stories">
+                            <input type="text" id="reddit-subreddit" name="subreddit" value="r/askreddit">
                             <input type="text" id="reddit-username" name="username" value="u/Anonymous">
                         </div>
                         <input type="text" id="reddit-title" name="title" placeholder="Reddit Post Title...">
@@ -67,7 +67,7 @@
                             <div class="post-header">
                                 <img src="https://i.imgur.com/Kq4g5tW.png" class="post-icon">
                                 <div class="post-meta">
-                                    <span class="post-subreddit">r/stories</span>
+                                    <span class="post-subreddit">r/askreddit</span>
                                     <span class="post-username">u/Anonymous</span>
                                 </div>
                                 <img src="https://i.imgur.com/3ZJ7kMh.png" class="post-tick">
@@ -89,8 +89,18 @@
             <div class="status" id="status-area"></div>
         </main>
     </div>
-    <nav class="mobile-nav"><!-- ... --></nav>
-    <template id="dialogue-row-template"><!-- ... --></template>
+    <nav class="mobile-nav">
+        <a href="/" class="active"><i class="fa-solid fa-wand-magic-sparkles"></i> Editor</a>
+        <a href="/pricing"><i class="fa-solid fa-tags"></i> Pricing</a>
+        {% if user %}<a href="/logout"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>{% else %}<a href="/login" class="nav-button">Log In</a>{% endif %}
+    </nav>
+    <template id="dialogue-row-template">
+        <div class="dialogue-row">
+            <select class="character-select"><option value="peter">Peter</option><option value="brian">Brian</option></select>
+            <input type="text" class="dialogue-input" placeholder="Enter dialogue...">
+            <button class="remove-btn" title="Remove line">×</button>
+        </div>
+    </template>
     
     <script>
         const IS_AUTHENTICATED = {{ 'true' if user else 'false' }};
