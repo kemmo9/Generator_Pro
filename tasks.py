@@ -3,34 +3,47 @@ import requests
 import cloudinary
 import cloudinary.uploader
 from moviepy.editor import *
+import PIL.Image
+from PIL import Image, ImageDraw, ImageFont
 from rq import get_current_job
 import textwrap
 import time
 from jinja2 import Environment, FileSystemLoader
 
-# This hotfix is still necessary
-import PIL.Image
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
-# --- CONFIGURATION (No changes needed here) ---
+# --- CONFIGURATION (Complete and Final) ---
 HCTI_API_USER_ID = os.getenv("HCTI_USER_ID")
 HCTI_API_KEY = os.getenv("HCTI_API_KEY")
 SUBTITLE_STYLES = {
     "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
-    # ... all other subtitle styles
+    "yellow": {"fontsize": 45, "color": "#FFD700", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
+    "meme": {"fontsize": 50, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 3, "kerning": 1},
+    "minimalist": {"fontsize": 36, "color": "#E0E0E0", "font": "Arial"},
+    "glow_purple": {"fontsize": 42, "color": "white", "font": "Arial-Bold", "stroke_color": "#bb86fc", "stroke_width": 1.5},
+    "valorant": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "#FD4556", "stroke_width": 2},
+    "comic_book": {"fontsize": 45, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 5, "kerning": 2},
+    "professional": {"fontsize": 36, "color": "#FFFFFF", "font": "Arial", "bg_color": 'rgba(0, 0, 0, 0.6)'},
+    "horror": {"fontsize": 55, "color": "#A40606", "font": "Verdana-Bold", "kerning": -2},
+    "retro_wave": {"fontsize": 48, "color": "#F72585", "font": "Arial-Bold", "stroke_color": "#7209B7", "stroke_width": 2},
+    "fire": {"fontsize": 50, "color": "#FFD700", "font": "Impact", "stroke_color": "#E25822", "stroke_width": 2.5},
+    "ice": {"fontsize": 48, "color": "white", "font": "Arial-Bold", "stroke_color": "#00B4D8", "stroke_width": 2.5}
 }
 PREMIUM_STYLES = {"glow_purple", "valorant", "comic_book", "professional", "horror", "retro_wave", "fire", "ice"}
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq", "reddit": "jpuuy9amUxVn651Jjmtq"}
 BACKGROUND_VIDEO_URLS = {
     "minecraft_parkour1": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041495/hcipgj40g2rkujvkr5vi.mp4",
-    # ... all other background videos
+    "minecraft_parkour2": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041842/lth6r8frjh29qobragsh.mp4",
+    "subway_surfers1": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751043147/m9nkvmxhz9tph42lhspt.mp4",
+    "subway_surfers2": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751043573/lbxmatbcaroagjnqaf58.mp4"
 }
 cloudinary.config(cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"), api_key=os.getenv("CLOUDINARY_API_KEY"), api_secret=os.getenv("CLOUDINARY_API_SECRET"), secure=True)
+
 template_env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 
-# --- HELPER FUNCTIONS (No changes needed here) ---
+# --- HELPER FUNCTIONS ---
 def update_job_progress(message: str):
     job = get_current_job(); job.meta['progress'] = message; job.save_meta() if job else None; print(f"Job Progress: {message}")
 def download_file(url, local_filename):
@@ -50,52 +63,26 @@ def format_count(num_str):
         return str(int(num))
     except (ValueError, TypeError): return num_str
 
-# --- THE DEFINITIVE FIX for Reddit Image Generation ---
+# --- Reddit Image Generation ---
 def create_reddit_post_image_via_api(data):
     job_id = get_current_job().id
     template = template_env.get_template('reddit_template.html')
+    icon_url = "https://i.imgur.com/Kq4g5tW.png"; tick_url = "https://i.imgur.com/3ZJ7kMh.png"
+    likes_icon_url = "https://i.imgur.com/eYn0m6a.png"; comments_icon_url = "https://i.imgur.com/s273I29.png"
     
-    # Using publicly hosted, reliable icon URLs
-    icon_url = "https://i.imgur.com/Kq4g5tW.png"
-    tick_url = "https://i.imgur.com/3ZJ7kMh.png"
-    likes_icon_url = "https://i.imgur.com/eYn0m6a.png"
-    comments_icon_url = "https://i.imgur.com/s273I29.png"
-
     html = template.render(
-        subreddit=data['subreddit'], username=data['username'], title=data['title'],
-        body="", # Body is rendered as subtitles, not in the image
-        upvotes=format_count(data['upvotes']), comments=format_count(data['comments']),
+        subreddit=data.get('subreddit', 'r/stories'), 
+        username=data.get('username', 'u/Anonymous'), 
+        title=data.get('title', ''), 
+        body=data.get('body', ''),
+        upvotes=format_count(data.get('upvotes', '99+')), 
+        comments=format_count(data.get('comments', '99+')),
         icon_url=icon_url, tick_url=tick_url, likes_icon_url=likes_icon_url, comments_icon_url=comments_icon_url
     )
-
-    # This new CSS creates the smaller, top-left aligned post
-    css = """
-    body { margin: 0; font-family: 'Inter', sans-serif; }
-    .post-container {
-        background-color: #FFFFFF;
-        border: 1px solid #dee0e1;
-        border-radius: 12px;
-        padding: 16px;
-        width: 800px; /* Smaller width */
-        box-sizing: border-box;
-    }
-    .header { display: flex; align-items: center; margin-bottom: 12px; }
-    .icon { width: 28px; height: 28px; margin-right: 8px; }
-    .meta { display: flex; align-items: center; }
-    .subreddit { color: #1c1c1c; font-weight: 500; font-size: 14px; }
-    .username { color: #787c7e; font-size: 14px; margin-left: 8px; }
-    .tick { display: none; } /* Hide the tick for a cleaner look */
-    .title { font-size: 24px; font-weight: 600; color: #1a1b1e; line-height: 1.3; margin: 0; }
-    .footer { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; color: #787c7e; font-weight: 500; font-size: 14px;}
-    .footer-icon { height: 20px; margin-right: 6px; }
-    .likes, .comments { display: flex; align-items: center; }
-    """
-
-    api_data = {'html': html, 'css': css, 'google_fonts': 'Inter'}
+    api_data = {'html': html, 'google_fonts': 'Inter'}
     response = requests.post('https://hcti.io/v1/image', data=api_data, auth=(HCTI_API_USER_ID, HCTI_API_KEY))
     response.raise_for_status()
     image_url = response.json()['url']
-    
     image_filename = f"temp_reddit_frame_{job_id}.png"
     download_file(image_url, image_filename)
     return image_filename
@@ -124,11 +111,10 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
         background_clip = VideoFileClip(temp_bg_path).set_duration(total_duration)
 
         update_job_progress("Generating post image...")
+        # --- THE FIX: This now passes the complete reddit_data dictionary ---
         image_path = create_reddit_post_image_via_api(reddit_data)
         temp_files.append(image_path)
-        
-        # --- THE FIX: Position the post image at the top-left ---
-        scene1_clip = ImageClip(image_path).set_duration(title_audio_clip.duration).set_position(("left", "top")).margin(top=30, left=30, opacity=0)
+        scene1_clip = ImageClip(image_path).set_duration(title_audio_clip.duration).resize(width=1000).set_position(('center', 'top')).margin(top=50, opacity=0)
         
         scene2_clips = []
         if body_audio_clip:
@@ -149,7 +135,6 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
         for f in temp_files: os.remove(f) if os.path.exists(f) else None
 
 def create_video_task(dialogue_data: list, options: dict):
-    # This is the original, working code for character dialogues.
     update_job_progress("Initializing character dialogue video..."); temp_files = []
     try:
         audio_clips = []; update_job_progress("Generating audio clips...")
