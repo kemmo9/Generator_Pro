@@ -7,20 +7,32 @@ from rq import get_current_job
 import textwrap
 import time
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (No changes needed here) ---
 HCTI_API_USER_ID = os.getenv("HCTI_USER_ID")
 HCTI_API_KEY = os.getenv("HCTI_API_KEY")
-
 SUBTITLE_STYLES = {
     "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
-    # ... all your other subtitle styles ...
+    "yellow": {"fontsize": 45, "color": "#FFD700", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
+    "meme": {"fontsize": 50, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 3, "kerning": 1},
+    "minimalist": {"fontsize": 36, "color": "#E0E0E0", "font": "Arial"},
+    "glow_purple": {"fontsize": 42, "color": "white", "font": "Arial-Bold", "stroke_color": "#bb86fc", "stroke_width": 1.5},
+    "valorant": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "#FD4556", "stroke_width": 2},
+    "comic_book": {"fontsize": 45, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 5, "kerning": 2},
+    "professional": {"fontsize": 36, "color": "#FFFFFF", "font": "Arial", "bg_color": 'rgba(0, 0, 0, 0.6)'},
+    "horror": {"fontsize": 55, "color": "#A40606", "font": "Verdana-Bold", "kerning": -2},
+    "retro_wave": {"fontsize": 48, "color": "#F72585", "font": "Arial-Bold", "stroke_color": "#7209B7", "stroke_width": 2},
+    "fire": {"fontsize": 50, "color": "#FFD700", "font": "Impact", "stroke_color": "#E25822", "stroke_width": 2.5},
+    "ice": {"fontsize": 48, "color": "white", "font": "Arial-Bold", "stroke_color": "#00B4D8", "stroke_width": 2.5}
 }
 PREMIUM_STYLES = {"glow_purple", "valorant", "comic_book", "professional", "horror", "retro_wave", "fire", "ice"}
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq", "reddit": "jpuuy9amUxVn651Jjmtq"}
+CHARACTER_IMAGE_PATHS = {"peter": os.path.join(os.path.dirname(__file__), "static/peter.png"), "brian": os.path.join(os.path.dirname(__file__), "static/brian.png")}
 BACKGROUND_VIDEO_URLS = {
     "minecraft_parkour1": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041495/hcipgj40g2rkujvkr5vi.mp4",
-    # ... all your other background videos ...
+    "minecraft_parkour2": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751041842/lth6r8frjh29qobragsh.mp4",
+    "subway_surfers1": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751043147/m9nkvmxhz9tph42lhspt.mp4",
+    "subway_surfers2": "https://res.cloudinary.com/dh2bzsmyd/video/upload/v1751043573/lbxmatbcaroagjnqaf58.mp4"
 }
 cloudinary.config(cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"), api_key=os.getenv("CLOUDINARY_API_KEY"), api_secret=os.getenv("CLOUDINARY_API_SECRET"), secure=True)
 
@@ -47,41 +59,56 @@ def format_count(num_str):
         return str(int(num))
     except (ValueError, TypeError): return num_str
 
-# --- NEW, UNBREAKABLE Reddit Image Generation ---
+# --- THE DEFINITIVE FIX for Reddit Image Generation ---
 def create_reddit_post_image_via_api(data, text_chunk, part_num):
     job_id = get_current_job().id
-    html_template = f"""
-    <div class="post">
-        <div class="header">
-            <img src="https://www.redditstatic.com/desktop2x/img/favicon/apple-icon-57x57.png" class="icon">
-            <span class="subreddit">{data['subreddit']}</span>
-            <span class="meta">• Posted by {data['username']}</span>
+    # This HTML is structured to look exactly like the reference images.
+    html = f"""
+    <html>
+    <head>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div class="post">
+            <div class="header">
+                <img src="https://www.redditstatic.com/desktop2x/img/favicon/apple-icon-57x57.png" class="icon">
+                <span class="meta"><b>{data['subreddit']}</b> • Posted by {data['username']}</span>
+            </div>
+            <h2 class="title">{data['title']}</h2>
+            <div class="body">{text_chunk.replace(chr(10), "<br>")}</div>
+            <div class="footer">
+                <span class="votes">⬆️ {format_count(data['upvotes'])}</span>
+                <span class="comments">💬 {format_count(data['comments'])}</span>
+                <span class="share">🔗 Share</span>
+            </div>
         </div>
-        <h2 class="title">{data['title']}</h2>
-        <div class="body">{text_chunk}</div>
-        <div class="footer">
-            <span class="votes">⬆️ {format_count(data['upvotes'])}</span>
-            <span class="comments">💬 {format_count(data['comments'])}</span>
-        </div>
-    </div>"""
+    </body>
+    </html>"""
 
-    css_template = """
-    body { margin: 0; background-color: #030303; }
-    .post { background-color: #1A1A1B; color: #D7DADC; font-family: 'Verdana', sans-serif; padding: 20px; border-radius: 8px; width: 1000px; box-sizing: border-box;}
-    .header { display: flex; align-items: center; font-size: 14px; color: #818384; margin-bottom: 15px; }
-    .icon { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; }
-    .subreddit { color: #D7DADC; font-weight: bold; }
-    .title { font-size: 24px; font-weight: 600; color: #D7DADC; margin-bottom: 15px; }
-    .body { font-size: 16px; line-height: 1.6; white-space: pre-wrap; }
-    .footer { margin-top: 20px; font-size: 14px; font-weight: bold; }
-    .votes, .comments { margin-right: 20px; }"""
+    # This CSS is robust and uses the imported Google Font.
+    css = """
+    body { margin: 0; background-color: rgba(0,0,0,0); /* Transparent background */ }
+    .post {
+        background-color: #FFFFFF;
+        font-family: 'Inter', sans-serif;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        width: 1000px;
+        box-sizing: border-box;
+    }
+    .header { display: flex; align-items: center; font-size: 16px; color: #787c7e; margin-bottom: 15px; }
+    .icon { width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; }
+    .title { font-size: 22px; font-weight: 600; color: #1c1c1c; margin-bottom: 15px; }
+    .body { font-size: 18px; line-height: 1.6; color: #1c1c1c; }
+    .footer { margin-top: 20px; font-size: 16px; font-weight: 600; color: #787c7e; }
+    .votes, .comments, .share { margin-right: 25px; }"""
 
-    api_data = {'html': html_template, 'css': css_template}
+    api_data = {'html': html, 'css': css}
     response = requests.post('https://hcti.io/v1/image', data=api_data, auth=(HCTI_API_USER_ID, HCTI_API_KEY))
     response.raise_for_status()
     image_url = response.json()['url']
     
-    # Download the generated image
     image_filename = f"temp_reddit_frame_{job_id}_{part_num}.png"
     download_file(image_url, image_filename)
     return image_filename
@@ -91,14 +118,12 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
     update_job_progress("Initializing Reddit video..."); temp_files = []
     video_clips = []
     try:
-        story_text = reddit_data.get('body', '')
-        full_text_for_vo = f"{reddit_data['title']}. {story_text}"
-        
+        story_text = reddit_data.get('body', ''); full_text_for_vo = f"{reddit_data['title']}. {story_text}"
         update_job_progress("Generating voiceover..."); vo_filename = f"temp_vo_{get_current_job().id}.mp3"
         temp_files.append(vo_filename); generate_audio_elevenlabs(full_text_for_vo, vo_filename, VOICE_IDS.get("reddit"))
         full_audio_clip = AudioFileClip(vo_filename)
         
-        chunks = textwrap.wrap(story_text, width=350, replace_whitespace=False)
+        chunks = textwrap.wrap(story_text, width=400, replace_whitespace=False, drop_whitespace=False)
         if not chunks: chunks = [" "]
         total_chars = sum(len(c) for c in chunks) or 1
         
@@ -110,10 +135,9 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
             img_clip = ImageClip(image_path).set_duration(chunk_duration)
             video_clips.append(img_clip)
 
-        reddit_story_clip = concatenate_videoclips(video_clips, method="compose").set_position('center')
+        reddit_story_clip = concatenate_videoclips(video_clips, method="compose").set_position(('center', 0.2), relative=True)
         
-        update_job_progress("Downloading background...")
-        bg_url = BACKGROUND_VIDEO_URLS.get(options.get("backgroundVideo", "minecraft_parkour1"))
+        update_job_progress("Downloading background..."); bg_url = BACKGROUND_VIDEO_URLS.get(options.get("backgroundVideo", "minecraft_parkour1"))
         temp_bg_path = download_file(bg_url, f"temp_bg_{get_current_job().id}.mp4"); temp_files.append(temp_bg_path)
         background_clip = VideoFileClip(temp_bg_path).set_duration(full_audio_clip.duration)
         
@@ -146,8 +170,7 @@ def create_video_task(dialogue_data: list, options: dict):
         video_clips = []; current_time = 0; update_job_progress("Compositing video...")
         selected_style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"))
         for i, clip_data in enumerate(dialogue_data):
-            # This uses the absolute path method, which is robust
-            char_path = os.path.join(os.path.dirname(__file__), "static", f"{clip_data['character']}.png")
+            char_path = CHARACTER_IMAGE_PATHS[clip_data["character"]]
             img = ImageClip(char_path).set_duration(audio_clips[i].duration).set_start(current_time).set_position(clip_data.get("imagePlacement", "center")).resize(height=300)
             txt = TextClip(clip_data["text"], **selected_style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(("center", 0.8), relative=True)
             video_clips.extend([img, txt]); current_time += audio_clips[i].duration
