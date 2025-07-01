@@ -42,45 +42,25 @@
             <div class="pricing-grid">
                 <!-- Free Tier -->
                 <div class="pricing-card">
-                    <div class="card-header">
-                        <h2>Free</h2>
-                        <p class="price">$0<span>/mo</span></p>
-                    </div>
+                    <div class="card-header"><h2>Free</h2><p class="price">$0<span>/mo</span></p></div>
                     <ul class="features">
-                        <li>1,500 words/month</li>
-                        <li>Max 15 second videos</li>
-                        <li>720p Resolution / 30 FPS</li>
-                        <li>Watermark & Ads</li>
+                        <li>1,500 words/month</li><li>Max 15 second videos</li><li>720p Resolution / 30 FPS</li><li>Watermark & Ads</li>
                     </ul>
                     <a href="/" class="nav-button cta-button">Start Creating</a>
                 </div>
-
                 <!-- Pro Tier -->
                 <div class="pricing-card popular">
-                    <div class="card-header">
-                        <h2>Pro</h2>
-                        <p class="price">$7<span>/mo</span></p>
-                    </div>
+                    <div class="card-header"><h2>Pro</h2><p class="price">$7<span>/mo</span></p></div>
                     <ul class="features">
-                        <li>5,000 words/month</li>
-                        <li>Max 30 second videos</li>
-                        <li>1080p Resolution / 60 FPS</li>
-                        <li>No Watermark, No Ads</li>
+                        <li>5,000 words/month</li><li>Max 30 second videos</li><li>1080p Resolution / 60 FPS</li><li>No Watermark, No Ads</li>
                     </ul>
                     <button id="subscribe-pro" class="nav-button cta-button">Subscribe to Pro</button>
                 </div>
-
                 <!-- Platinum Tier -->
                 <div class="pricing-card">
-                    <div class="card-header">
-                        <h2>Platinum</h2>
-                        <p class="price">$25<span>/mo</span></p>
-                    </div>
+                    <div class="card-header"><h2>Platinum</h2><p class="price">$25<span>/mo</span></p></div>
                     <ul class="features">
-                        <li>30,000 words/month</li>
-                        <li>Max 1 minute videos</li>
-                        <li>4K Resolution / 60 FPS</li>
-                        <li>No Watermark, No Ads</li>
+                        <li>30,000 words/month</li><li>Max 1 minute videos</li><li>4K Resolution / 60 FPS</li><li>No Watermark, No Ads</li>
                     </ul>
                     <button id="subscribe-platinum" class="nav-button cta-button">Subscribe to Platinum</button>
                 </div>
@@ -93,11 +73,7 @@
     <nav class="mobile-nav">
         <a href="/"><i class="fa-solid fa-wand-magic-sparkles"></i> Editor</a>
         <a href="/pricing" class="active"><i class="fa-solid fa-tags"></i> Pricing</a>
-        {% if user %}
-            <a href="/logout"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
-        {% else %}
-            <a href="/login" class="nav-button">Log In</a>
-        {% endif %}
+        {% if user %}<a href="/logout"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>{% else %}<a href="/login" class="nav-button">Log In</a>{% endif %}
     </nav>
     
     <script>
@@ -105,18 +81,16 @@
         const statusArea = document.getElementById('status-area');
         const isAuthenticated = {{ 'true' if user else 'false' }};
 
-        // --- THE FIX: Using the correct Price IDs you already provided ---
-        const proPriceId = 'price_1PLa8dB8zns26Ywzfcnb3iYj';
-        const platinumPriceId = 'price_1PLa99B8zns26Ywz92Tqg0k9';
+        // --- THE FIX: Using the correct Price IDs you just provided ---
+        const proPriceId = 'price_1RfXZkFf7LkPmPagMZDqc90f';
+        const platinumPriceId = 'price_1RfXbEFf7LkPmPagZg0PpntS';
 
         const handleSubscription = (priceId) => {
             if (!isAuthenticated) {
                 window.location.href = '/login';
                 return;
             }
-
             statusArea.textContent = 'Redirecting to checkout...';
-
             fetch('/api/create-checkout-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -142,8 +116,8 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('checkout_status') === 'success') {
-            statusArea.textContent = 'Subscription successful! Your plan should be active now.';
-        } else if (url_params.get('checkout_status') === 'cancel') {
+            statusArea.textContent = 'Subscription successful! Your plan is now active.';
+        } else if (urlParams.get('checkout_status') === 'cancel') {
             statusArea.textContent = 'Subscription process was cancelled. You can try again anytime.';
         }
     </script>
