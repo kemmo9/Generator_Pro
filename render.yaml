@@ -10,37 +10,43 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.4
       - key: AUTH0_DOMAIN
-        value: "dev-23iqnnqsp0tbnxch.us.auth0.com"
+        sync: false
       - key: AUTH0_CLIENT_ID
-        value: "99E30sRywMn8h4uFwa5edAbR27F6NGzU"
+        sync: false
       - key: AUTH0_CLIENT_SECRET
         sync: false
       - key: APP_SECRET_KEY
         sync: false
-      - key: ELEVENLABS_API_KEY
+      - key: STRIPE_SECRET_KEY
         sync: false
-      - key: CLOUDINARY_CLOUD_NAME
+      - key: STRIPE_PUBLISHABLE_KEY
         sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
+      - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: REDIS_URL
         fromService:
           type: redis
           name: ai-video-queue
           property: connectionString
+      - key: HCTI_USER_ID
+        sync: false # Web service might need it later
+      - key: HCTI_API_KEY
+        sync: false # Web service might need it later
 
   # 2. The Background Worker
   - type: worker
     name: ai-video-worker
     env: python
     buildCommand: "pip install -r requirements.txt"
-    # --- THE FIX: This now points to the new worker script ---
     startCommand: "python worker.py"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.4
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ai-video-queue
+          property: connectionString
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
@@ -49,11 +55,11 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: ai-video-queue
-          property: connectionString
+      # --- THE FIX: ADDING THE MISSING SECRETS TO THE WORKER ---
+      - key: HCTI_USER_ID
+        sync: false
+      - key: HCTI_API_KEY
+        sync: false
 
   # 3. The Redis Queue
   - type: redis
