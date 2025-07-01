@@ -65,7 +65,6 @@
                 </div>
             </div>
 
-            <!-- THE FIX: Both buttons are now back inside the single .controls grid container -->
             <div class="controls">
                 <button id="add-dialogue-btn"><i class="fa-solid fa-plus"></i> Add Dialogue Line</button>
                 <button id="generate-btn"><span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="text">Generate Video</span></button>
@@ -97,32 +96,90 @@
             const dialogueEditor = document.getElementById('dialogue-editor');
             const redditEditor = document.getElementById('reddit-editor');
             const addDialogueBtn = document.getElementById('add-dialogue-btn');
+            const generateBtn = document.getElementById('generate-btn');
+            const statusArea = document.getElementById('status-area');
+            const dialogueContainer = document.getElementById('dialogue-container');
+            const rowTemplate = document.getElementById('dialogue-row-template');
 
-            // THE FIX: The JS now only targets the "Add Dialogue" button for show/hide,
-            // leaving the Generate button's visibility untouched.
             document.querySelectorAll('#template-selector .option-box').forEach(box => {
                 box.addEventListener('click', () => {
                     const template = box.dataset.template;
                     dialogueEditor.style.display = template === 'character' ? 'block' : 'none';
                     redditEditor.style.display = template === 'reddit' ? 'block' : 'none';
-                    // This now correctly hides only the Add button, not the entire controls container
                     addDialogueBtn.style.display = template === 'character' ? 'flex' : 'none';
                 });
             });
 
-            // The rest of your working JavaScript logic from before goes here, complete and unchanged.
-            const generateBtn = document.getElementById('generate-btn');
             generateBtn.addEventListener('click', async () => {
-                // ... (The full, correct generate button logic) ...
+                if (!IS_AUTHENTICATED) { window.location.href = '/login'; return; }
+                
+                const generateBtnIcon = generateBtn.querySelector('.icon');
+                const generateBtnText = generateBtn.querySelector('.text');
+                generateBtn.disabled = true;
+                generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
+                generateBtnText.textContent = 'Generating...';
+                statusArea.textContent = 'Starting...';
+
+                const activeTemplate = document.querySelector('#template-selector .option-box.selected').dataset.template;
+                let dataPayload;
+
+                if (activeTemplate === 'character') {
+                    dataPayload = { dialogue_data: Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, imagePlacement: r.querySelector('.placement-select').value, text: r.querySelector('.dialogue-input').value })).filter(l => l.text) };
+                    if (dataPayload.dialogue_data.length === 0) {
+                        alert('Please enter at least one line of dialogue.');
+                        generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
+                        return;
+                    }
+                } else {
+                    dataPayload = { reddit_data: { title: document.getElementById('reddit-title').value, body: document.getElementById('reddit-body').value } };
+                    if (!dataPayload.reddit_data.title) {
+                        alert('Please enter a Reddit title.');
+                        generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
+                        return;
+                    }
+                }
+
+                const optionsPayload = { template: activeTemplate, backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style };
+                const payload = { ...dataPayload, options: optionsPayload };
+
+                try {
+                    const response = await fetch('/api/generate-video', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                    if (!response.ok) { const err = await response.json(); throw new Error(err.detail || 'Failed to start job.'); }
+                    const data = await response.json();
+                    statusArea.textContent = `Job queued! Polling...`;
+                    
+                    const intervalId = setInterval(async () => {
+                        const statusResponse = await fetch(`/api/job-status/${data.job_id}`);
+                        if (!statusResponse.ok) return;
+                        const statusData = await statusResponse.json();
+                        statusArea.textContent = `Status: ${statusData.progress}`;
+                        if (statusData.status === 'finished' || statusData.status === 'failed') {
+                            clearInterval(intervalId);
+                            generateBtn.disabled = false;
+                            generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                            generateBtnText.textContent = 'Generate Video';
+                            if (statusData.status === 'finished') {
+                                statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Clip</a>`;
+                            } else {
+                                statusArea.textContent = `Failed: ${statusData.progress}`;
+                            }
+                        }
+                    }, 3000);
+                } catch (error) {
+                    statusArea.textContent = `Error: ${error.message}`;
+                    generateBtn.disabled = false;
+                    generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                    generateBtnText.textContent = 'Generate Video';
+                }
             });
-            const dialogueContainer = document.getElementById('dialogue-container');
-            const rowTemplate = document.getElementById('dialogue-row-template');
+
             const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
             if (dialogueContainer.children.length === 0) { addRow(); addRow(); }
             addDialogueBtn.addEventListener('click', addRow);
             dialogueContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove();
             });
+
             document.querySelectorAll('.selector-grid').forEach(grid => {
                 grid.addEventListener('click', (event) => {
                     const selectedOption = event.target.closest('.option-box');
@@ -131,6 +188,7 @@
                     selectedOption.classList.add('selected');
                 });
             });
+
             document.querySelector('#template-selector .option-box.selected').dispatchEvent(new Event('click'));
         });
     </script>
