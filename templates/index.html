@@ -5,25 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Make a Clip</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
     <div class="site-container">
-        <!-- Desktop Header -->
         <header class="desktop-header">
             <div class="auth-buttons">
                 {% if user %}<a href="/logout" class="nav-button">Log Out</a>{% else %}<a href="/login" class="nav-button">Log In</a>{% endif %}
             </div>
             <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
             <ul class="nav-menu">
-                <li><a href="#">Text to Speech</a></li>
-                <li><a href="/" class="active">Viral Editor</a></li>
+                <li><a href="/" class="active">Editor</a></li>
                 <li><a href="/pricing">Pricing</a></li>
             </ul>
         </header>
-
-        <!-- Mobile Header -->
         <div class="mobile-header">
             <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
         </div>
@@ -40,21 +37,11 @@
             <p class="step-title"><span class="accent-text">Step 2:</span> Choose Background</p>
             <div class="selector-grid" id="background-selector">
                 <div class="option-box selected" data-video="minecraft_parkour1"><img src="/static/minecraft1.png" alt="Minecraft Parkour 1"><div class="label">Minecraft Parkour 1</div></div>
-                <div class="option-box" data-video="minecraft_parkour2"><img src="/static/minecraft2.png" alt="Minecraft Parkour 2"><div class="label">Minecraft Parkour 2</div></div>
-                <div class="option-box" data-video="subway_surfers1"><img src="/static/subwaysurfer1.png" alt="Subway Surfers 1"><div class="label">Subway Surfers 1</div></div>
-                <div class="option-box" data-video="subway_surfers2"><img src="/static/subwaysurfer2.png" alt="Subway Surfers 2"><div class="label">Subway Surfers 2</div></div>
             </div>
 
-            <p class="step-title"><span class="accent-text">Step 3:</span> Choose Subtitles</p>
-            <div class="subtitle-selector-wrapper">
-                <button id="scroll-left" class="scroll-btn"><</button>
-                <div class="selector-grid" id="subtitle-selector">
-                    <div class="option-box selected" data-style="standard"><p class="subtitle-preview standard-preview">Standard</p></div>
-                    <div class="option-box" data-style="yellow"><p class="subtitle-preview yellow-preview">Yellow</p></div>
-                    <div class="option-box" data-style="meme"><p class="subtitle-preview meme-preview">Meme</p></div>
-                    <div class="option-box" data-style="glow_purple"><p class="subtitle-preview glow_purple-preview">Glow <span class="pro-badge">PRO</span></p></div>
-                </div>
-                <button id="scroll-right" class="scroll-btn">></button>
+            <p class="step-title"><span class="accent-text">Step 3:</span> Choose Subtitles (for story body)</p>
+            <div class="selector-grid" id="subtitle-selector">
+                <div class="option-box selected" data-style="standard"><p class="subtitle-preview standard-preview">Standard</p></div>
             </div>
 
             <p class="step-title"><span class="accent-text">Step 4:</span> Write Your Script</p>
@@ -65,28 +52,33 @@
                 <div id="reddit-editor" style="display: none;">
                     <form id="reddit-form" class="reddit-editor-form">
                         <div class="input-grid">
-                            <input type="text" id="reddit-subreddit" name="subreddit" value="r/askreddit">
+                            <input type="text" id="reddit-subreddit" name="subreddit" value="r/stories">
                             <input type="text" id="reddit-username" name="username" value="u/Anonymous">
                         </div>
                         <input type="text" id="reddit-title" name="title" placeholder="Reddit Post Title...">
-                        <textarea id="reddit-body" name="body" rows="6" placeholder="Enter the story body for the voiceover..."></textarea>
+                        <textarea id="reddit-body" name="body" rows="6" placeholder="Enter the story body for the voiceover and subtitles..."></textarea>
                         <div class="input-grid">
-                            <input type="text" id="reddit-upvotes" name="upvotes" value="21.4k">
-                            <input type="text" id="reddit-comments" name="comments" value="1.8k">
-                        </div>
-                        <div class="input-grid">
-                            <select id="reddit-position">
-                                <option value="top_left">Top Left</option>
-                                <option value="center">Center</option>
-                                <option value="top_center">Top Center</option>
-                            </select>
-                            <select id="reddit-size">
-                                <option value="800">Small</option>
-                                <option value="1000" selected>Medium</option>
-                                <option value="1200">Large</option>
-                            </select>
+                            <input type="text" id="reddit-upvotes" name="upvotes" value="99+">
+                            <input type="text" id="reddit-comments" name="comments" value="99+">
                         </div>
                     </form>
+                    <div id="reddit-post-preview-container">
+                        <div id="reddit-post-preview">
+                            <div class="post-header">
+                                <img src="https://i.imgur.com/Kq4g5tW.png" class="post-icon">
+                                <div class="post-meta">
+                                    <span class="post-subreddit">r/stories</span>
+                                    <span class="post-username">u/Anonymous</span>
+                                </div>
+                                <img src="https://i.imgur.com/3ZJ7kMh.png" class="post-tick">
+                            </div>
+                            <h1 class="post-title">Reddit Post Title...</h1>
+                            <div class="post-footer">
+                                <span class="footer-item"><img src="https://i.imgur.com/eYn0m6a.png" class="footer-icon"><span class="post-upvotes">99+</span></span>
+                                <span class="footer-item"><img src="https://i.imgur.com/s273I29.png" class="footer-icon"><span class="post-comments">99+</span></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -97,30 +89,16 @@
             <div class="status" id="status-area"></div>
         </main>
     </div>
-
-    <nav class="mobile-nav">
-        <a href="/" class="active"><i class="fa-solid fa-wand-magic-sparkles"></i> Editor</a>
-        <a href="/pricing"><i class="fa-solid fa-tags"></i> Pricing</a>
-        {% if user %}<a href="/logout"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>{% else %}<a href="/login" class="nav-button">Log In</a>{% endif %}
-    </nav>
-
-    <template id="dialogue-row-template">
-        <div class="dialogue-row">
-            <select class="character-select"><option value="peter">Peter</option><option value="brian">Brian</option></select>
-            <select class="placement-select"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select>
-            <input type="text" class="dialogue-input" placeholder="Enter dialogue...">
-            <button class="remove-btn" title="Remove line">×</button>
-        </div>
-    </template>
+    <nav class="mobile-nav"><!-- ... --></nav>
+    <template id="dialogue-row-template"><!-- ... --></template>
     
     <script>
         const IS_AUTHENTICATED = {{ 'true' if user else 'false' }};
-        
         document.addEventListener('DOMContentLoaded', () => {
             const dialogueEditor = document.getElementById('dialogue-editor');
             const redditEditor = document.getElementById('reddit-editor');
             const addDialogueBtn = document.getElementById('add-dialogue-btn');
-            
+
             document.querySelectorAll('#template-selector .option-box').forEach(box => {
                 box.addEventListener('click', () => {
                     const template = box.dataset.template;
@@ -130,25 +108,22 @@
                 });
             });
 
-            const subtitleSelector = document.getElementById('subtitle-selector');
-            const scrollLeftBtn = document.getElementById('scroll-left');
-            const scrollRightBtn = document.getElementById('scroll-right');
-
-            if (scrollLeftBtn && scrollRightBtn) {
-                scrollLeftBtn.addEventListener('click', () => {
-                    const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
-                    subtitleSelector.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-                });
-                scrollRightBtn.addEventListener('click', () => {
-                    const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
-                    subtitleSelector.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-                });
+            const redditForm = document.getElementById('reddit-form');
+            const preview = document.getElementById('reddit-post-preview');
+            function updatePreview() {
+                preview.querySelector('.post-subreddit').textContent = document.getElementById('reddit-subreddit').value;
+                preview.querySelector('.post-username').textContent = document.getElementById('reddit-username').value;
+                const title = document.getElementById('reddit-title').value;
+                preview.querySelector('.post-title').textContent = title ? title : "Reddit Post Title...";
+                preview.querySelector('.post-upvotes').textContent = document.getElementById('reddit-upvotes').value;
+                preview.querySelector('.post-comments').textContent = document.getElementById('reddit-comments').value;
             }
-            
+            redditForm.addEventListener('input', updatePreview);
+            updatePreview();
+
             const generateBtn = document.getElementById('generate-btn');
             generateBtn.addEventListener('click', async () => {
                 if (!IS_AUTHENTICATED) { window.location.href = '/login'; return; }
-                
                 const generateBtnIcon = generateBtn.querySelector('.icon');
                 const generateBtnText = generateBtn.querySelector('.text');
                 generateBtn.disabled = true;
@@ -161,37 +136,29 @@
                 let dataPayload;
 
                 if (activeTemplate === 'reddit') {
+                    statusArea.textContent = 'Capturing post image...';
+                    const canvas = await html2canvas(document.getElementById('reddit-post-preview'), { useCORS: true, backgroundColor: null });
+                    const redditImageData = canvas.toDataURL('image/png');
                     dataPayload = {
                         reddit_data: {
-                            subreddit: document.getElementById('reddit-subreddit').value,
-                            username: document.getElementById('reddit-username').value,
                             title: document.getElementById('reddit-title').value,
                             body: document.getElementById('reddit-body').value,
-                            upvotes: document.getElementById('reddit-upvotes').value,
-                            comments: document.getElementById('reddit-comments').value,
-                            position: document.getElementById('reddit-position').value,
-                            size: parseInt(document.getElementById('reddit-size').value, 10)
+                            image_data_url: redditImageData 
                         }
                     };
                     if (!dataPayload.reddit_data.title) {
                         alert('Please enter a Reddit title.');
-                        generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
-                        return;
+                        generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video'; return;
                     }
                 } else {
-                    dataPayload = { dialogue_data: Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, imagePlacement: r.querySelector('.placement-select').value, text: r.querySelector('.dialogue-input').value })).filter(l => l.text) };
+                    dataPayload = { dialogue_data: Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, text: r.querySelector('.dialogue-input').value })) };
                     if (dataPayload.dialogue_data.length === 0) {
                         alert('Please enter at least one line of dialogue.');
-                        generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
-                        return;
+                        generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video'; return;
                     }
                 }
                 
-                const optionsPayload = { 
-                    template: activeTemplate, 
-                    backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, 
-                    subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style 
-                };
+                const optionsPayload = { template: activeTemplate, backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style };
                 const payload = { ...dataPayload, options: optionsPayload };
 
                 try {
@@ -207,21 +174,15 @@
                         statusArea.textContent = `Status: ${statusData.progress}`;
                         if (statusData.status === 'finished' || statusData.status === 'failed') {
                             clearInterval(intervalId);
-                            generateBtn.disabled = false;
-                            generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
-                            generateBtnText.textContent = 'Generate Video';
+                            generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                             if (statusData.status === 'finished') {
-                                statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Your Clip</a>`;
-                            } else {
-                                statusArea.textContent = `Failed: ${statusData.progress}`;
-                            }
+                                statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Clip</a>`;
+                            } else { statusArea.textContent = `Failed: ${statusData.progress}`; }
                         }
                     }, 3000);
                 } catch (error) {
                     statusArea.textContent = `Error: ${error.message}`;
-                    generateBtn.disabled = false;
-                    generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
-                    generateBtnText.textContent = 'Generate Video';
+                    generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                 }
             });
             
@@ -230,10 +191,7 @@
             const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
             if (dialogueContainer.children.length === 0) { addRow(); addRow(); }
             addDialogueBtn.addEventListener('click', addRow);
-            dialogueContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove();
-            });
-
+            dialogueContainer.addEventListener('click', (e) => { if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove(); });
             document.querySelectorAll('.selector-grid').forEach(grid => {
                 grid.addEventListener('click', (event) => {
                     const selectedOption = event.target.closest('.option-box');
@@ -242,7 +200,6 @@
                     selectedOption.classList.add('selected');
                 });
             });
-
             document.querySelector('#template-selector .option-box.selected').dispatchEvent(new Event('click'));
         });
     </script>
