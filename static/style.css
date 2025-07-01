@@ -98,12 +98,11 @@ textarea { min-height: 120px; resize: vertical; }
 .post-subreddit { font-weight: 700; font-size: 16px; }
 .post-username { color: #787c7e; font-size: 14px; }
 .post-tick { width: 20px; height: 20px; margin-left: 8px; }
-.post-title { font-size: 28px; font-weight: 700; margin-bottom: 24px; line-height: 1.3; color: #1a1b1e; word-wrap: break-word; }
+.post-title { font-size: 28px; font-weight: 700; margin-bottom: 24px; line-height: 1.3; color: #1a1b1e; word-wrap: break-word; min-height: 38px; }
 .post-footer { display: flex; align-items: center; margin-top: 24px; color: #878a8c; font-weight: 700; font-size: 16px; }
+.footer-item { display: flex; align-items: center; }
+.footer-item:last-child { margin-left: 32px; }
 .footer-icon { height: 24px; margin-right: 8px; }
-.post-upvotes, .post-comments { display: flex; align-items: center; }
-.post-comments { margin-left: 32px; }
-
 
 /* --- MOBILE OVERHAUL --- */
 @media (max-width: 768px) {
