@@ -9,19 +9,21 @@ from rq import get_current_job
 import textwrap
 import time
 
+# This hotfix is still necessary for compatibility.
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
+# This is the robust method to ensure the worker can always find the 'static' folder.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-# --- THE FIX: Restoring the stroke_color that requires ImageMagick ---
+# --- THE DEFINITIVE FIX: stroke_color has been removed from all styles. ---
 SUBTITLE_STYLES = {
-    "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
-    "yellow": {"fontsize": 45, "color": "#FFD700", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
-    "meme": {"fontsize": 50, "color": "white", "font": "Impact", "kerning": 1, "stroke_color": "black", "stroke_width": 3},
+    "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold"},
+    "yellow": {"fontsize": 45, "color": "#FFD700", "font": "Arial-Bold"},
+    "meme": {"fontsize": 50, "color": "white", "font": "Impact", "kerning": 1},
 }
-PREMIUM_STYLES = {}
+PREMIUM_STYLES = {} # Ready for when we implement subscriptions
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq", "reddit": "jpuuy9amUxVn651Jjmtq"}
 CHARACTER_IMAGE_PATHS = {"peter": os.path.join(STATIC_DIR, "peter.png"), "brian": os.path.join(STATIC_DIR, "brian.png")}
@@ -108,15 +110,27 @@ def create_video_task(dialogue_data: list, options: dict):
         temp_bg_path = download_file(bg_url, f"temp_bg_{get_current_job().id}.mp4"); temp_files.append(temp_bg_path)
         background_clip = VideoFileClip(temp_bg_path).set_duration(final_audio.duration).set_audio(final_audio)
         video_clips = [background_clip]; current_time = 0; update_job_progress("Compositing video...")
-        selected_style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"))
+        style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"))
+        
         for i, clip_data in enumerate(dialogue_data):
             char_path = CHARACTER_IMAGE_PATHS[clip_data["character"]]
             img = ImageClip(char_path).set_duration(audio_clips[i].duration).set_start(current_time).set_position(clip_data.get("imagePlacement", "center")).resize(height=300)
-            txt = TextClip(clip_data["text"], **selected_style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(("center", 0.8), relative=True)
-            video_clips.extend([img, txt]); current_time += audio_clips[i].duration
+            
+            # This robust method for creating text with a shadow does not depend on ImageMagick
+            shadow_style = style.copy()
+            shadow_style['color'] = 'black'
+            shadow_offset = 2
+            
+            shadow_txt = TextClip(clip_data["text"], **shadow_style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(lambda t: ('center', 0.8*background_clip.h + shadow_offset))
+            main_txt = TextClip(clip_data["text"], **style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(('center', 0.8*background_clip.h))
+            
+            video_clips.extend([shadow_txt, main_txt, img]); current_time += audio_clips[i].duration
+        
         final_video = CompositeVideoClip(video_clips)
         output_filename = f"final_char_{get_current_job().id}.mp4"; temp_files.append(output_filename)
-        update_job_progress("Rendering final video..."); final_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", fps=24, logger='bar')
+        update_job_progress("Rendering final video...")
+        final_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", fps=24, logger='bar')
+        
         update_job_progress("Uploading..."); upload_result = cloudinary.uploader.upload(output_filename, resource_type="video")
         return {"video_url": upload_result['secure_url']}
     finally:
