@@ -1,8 +1,8 @@
 import os
 import json
 import stripe
-import anyio # For handling async file operations safely
-import shutil # For safely removing temporary directories
+import anyio
+import shutil
 from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, Request, Body, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
@@ -12,7 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from rq import Queue
 import redis
 
-# --- THE FIX: Import all necessary functions from our definitive tasks.py ---
+# --- Import all necessary functions from our definitive tasks.py ---
 from tasks import (
     PREMIUM_STYLES, 
     create_video_task, 
@@ -28,7 +28,6 @@ app.add_middleware(
     secret_key=os.getenv("APP_SECRET_KEY", "a_very_long_and_super_secret_string_for_local_testing_only")
 )
 
-# Load secrets and configurations from environment variables
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
@@ -36,7 +35,6 @@ AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID')
 AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET')
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
-# Initialize services
 conn = redis.from_url(REDIS_URL)
 q = Queue(connection=conn)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -75,30 +73,26 @@ async def logout(request: Request):
 
 @app.get('/callback')
 async def callback(request: Request):
-    token = await oauth.auth0.authorize_access_token(request)
-    request.session['user'] = token['userinfo']
-    return RedirectResponse(url="/")
+    token = await oauth.auth0.authorize_access_token(request); request.session['user'] = token['userinfo']; return RedirectResponse(url="/")
 
 # --- API Routes ---
 @app.post("/api/generate-reddit-preview")
 async def generate_reddit_preview(data: dict = Body(...)):
     """Generates and returns a static preview image for the Reddit editor."""
-    image_path = None
     temp_dir = None
     try:
         # Calls the dedicated preview function from tasks.py
+        # The function now returns the path to the image in its own temporary directory
         image_path = create_reddit_preview_image(data)
-        temp_dir = os.path.dirname(image_path) # Get the temp directory path
-        # Return the generated image directly
+        temp_dir = os.path.dirname(image_path)
         return FileResponse(image_path, media_type="image/png")
     except Exception as e:
         print(f"Error generating preview: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate preview image.")
     finally:
-        # A failsafe to clean up the preview image and its directory from the server after sending
+        # Safely clean up the temporary directory after the response is sent
         if temp_dir and os.path.exists(temp_dir):
             try:
-                # Use shutil.rmtree to safely remove the directory and its contents
                 await anyio.to_thread.run_sync(shutil.rmtree, temp_dir)
             except Exception as e:
                 print(f"Error cleaning up preview directory {temp_dir}: {e}")
@@ -124,18 +118,22 @@ async def stripe_webhook(request: Request):
 @app.post("/api/generate-video")
 async def queue_video_task(request: Request, payload: dict = Body(...), user: dict = Depends(get_user)):
     if not user: raise HTTPException(status_code=401, detail="Not authenticated")
-    options = payload.get("options", {}); selected_style = options.get("subtitleStyle")
+    options = payload.get("options", {})
     user_tier = user.get("https://makeaclip.pro/tier", "free") 
 
-    if selected_style in PREMIUM_STYLES and user_tier == "free":
-        raise HTTPException(status_code=403, detail=f"'{selected_style.replace('_', ' ').title()}' is a premium style. Please upgrade.")
+    # Since there are no more premium styles, this check can be simplified or removed.
+    # We will leave it for future use.
+    if options.get("subtitleStyle") in PREMIUM_STYLES and user_tier == "free":
+        raise HTTPException(status_code=403, detail=f"'{options.get('subtitleStyle').replace('_', ' ').title()}' is premium. Please upgrade.")
     
     template = options.get("template")
+    # This block now correctly routes to the right task function
     if template == "reddit":
         job = q.enqueue(create_reddit_video_task, payload.get("reddit_data", {}), options, job_timeout='5m')
     elif template == "character":
         job = q.enqueue(create_video_task, payload.get("dialogue_data", []), options, job_timeout='5m')
-    else: raise HTTPException(status_code=400, detail="Invalid template specified.")
+    else: 
+        raise HTTPException(status_code=400, detail="Invalid template specified.")
     
     return JSONResponse({"job_id": job.id})
 
