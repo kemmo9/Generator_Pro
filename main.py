@@ -2,6 +2,7 @@ import os
 import json
 import stripe
 import anyio # For handling async file operations safely
+import shutil # For safely removing temporary directories
 from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, Request, Body, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
@@ -22,7 +23,6 @@ from tasks import (
 # --- App Initialization & Config ---
 app = FastAPI()
 
-# This middleware is essential for storing the user's login session.
 app.add_middleware(
     SessionMiddleware, 
     secret_key=os.getenv("APP_SECRET_KEY", "a_very_long_and_super_secret_string_for_local_testing_only")
@@ -84,22 +84,24 @@ async def callback(request: Request):
 async def generate_reddit_preview(data: dict = Body(...)):
     """Generates and returns a static preview image for the Reddit editor."""
     image_path = None
+    temp_dir = None
     try:
         # Calls the dedicated preview function from tasks.py
         image_path = create_reddit_preview_image(data)
+        temp_dir = os.path.dirname(image_path) # Get the temp directory path
         # Return the generated image directly
         return FileResponse(image_path, media_type="image/png")
     except Exception as e:
         print(f"Error generating preview: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate preview image.")
     finally:
-        # A failsafe to clean up the preview image from the server after sending
-        if image_path and os.path.exists(image_path):
+        # A failsafe to clean up the preview image and its directory from the server after sending
+        if temp_dir and os.path.exists(temp_dir):
             try:
-                # Use anyio to run the blocking os.remove in a thread
-                await anyio.to_thread.run_sync(os.remove, image_path)
+                # Use shutil.rmtree to safely remove the directory and its contents
+                await anyio.to_thread.run_sync(shutil.rmtree, temp_dir)
             except Exception as e:
-                print(f"Error cleaning up preview file {image_path}: {e}")
+                print(f"Error cleaning up preview directory {temp_dir}: {e}")
 
 @app.post("/api/create-checkout-session")
 async def create_checkout_session(request: Request, payload: dict = Body(...), user: dict = Depends(get_user)):
@@ -129,13 +131,11 @@ async def queue_video_task(request: Request, payload: dict = Body(...), user: di
         raise HTTPException(status_code=403, detail=f"'{selected_style.replace('_', ' ').title()}' is a premium style. Please upgrade.")
     
     template = options.get("template")
-    # This block now correctly routes to the right task function
     if template == "reddit":
         job = q.enqueue(create_reddit_video_task, payload.get("reddit_data", {}), options, job_timeout='5m')
     elif template == "character":
         job = q.enqueue(create_video_task, payload.get("dialogue_data", []), options, job_timeout='5m')
-    else: 
-        raise HTTPException(status_code=400, detail="Invalid template specified.")
+    else: raise HTTPException(status_code=400, detail="Invalid template specified.")
     
     return JSONResponse({"job_id": job.id})
 
