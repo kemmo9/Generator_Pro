@@ -43,7 +43,10 @@ async def queue_video_task(request: Request, payload: dict = Body(...), user: di
     if not user: raise HTTPException(status_code=401)
     options = payload.get("options", {})
     if options.get("subtitleStyle") in PREMIUM_STYLES and user.get("tier", "free") == "free": raise HTTPException(status_code=403, detail="Premium style.")
-    job = q.enqueue(f'tasks.create_{options.get("template", "character")}_video_task', payload.get("dialogue_data", []) if options.get("template") == "character" else payload.get("reddit_data", {}), options)
+    if options.get("template") == 'reddit':
+        job = q.enqueue('tasks.create_reddit_video_task', payload.get("reddit_data", {}), options)
+    else:
+        job = q.enqueue('tasks.create_video_task', payload.get("dialogue_data", []), options)
     return JSONResponse({"job_id": job.id})
 
 @app.get("/api/job-status/{job_id}")
