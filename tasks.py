@@ -9,30 +9,18 @@ from rq import get_current_job
 import textwrap
 import time
 
-# This hotfix is still necessary for compatibility between MoviePy and newer Pillow versions.
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
-# This is the robust method to ensure the worker can always find the 'static' folder.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-# --- CONFIGURATION (Complete and Final) ---
 SUBTITLE_STYLES = {
     "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2},
     "yellow": {"fontsize": 45, "color": "#FFD700", "font": "Arial-Bold", "stroke_color": "black", "stroke_width": 2.5},
     "meme": {"fontsize": 50, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 3, "kerning": 1},
-    "minimalist": {"fontsize": 36, "color": "#E0E0E0", "font": "Arial"},
-    "glow_purple": {"fontsize": 42, "color": "white", "font": "Arial-Bold", "stroke_color": "#bb86fc", "stroke_width": 1.5},
-    "valorant": {"fontsize": 40, "color": "white", "font": "Arial-Bold", "stroke_color": "#FD4556", "stroke_width": 2},
-    "comic_book": {"fontsize": 45, "color": "white", "font": "Impact", "stroke_color": "black", "stroke_width": 5, "kerning": 2},
-    "professional": {"fontsize": 36, "color": "#FFFFFF", "font": "Arial", "bg_color": 'rgba(0, 0, 0, 0.6)'},
-    "horror": {"fontsize": 55, "color": "#A40606", "font": "Verdana-Bold", "kerning": -2},
-    "retro_wave": {"fontsize": 48, "color": "#F72585", "font": "Arial-Bold", "stroke_color": "#7209B7", "stroke_width": 2},
-    "fire": {"fontsize": 50, "color": "#FFD700", "font": "Impact", "stroke_color": "#E25822", "stroke_width": 2.5},
-    "ice": {"fontsize": 48, "color": "white", "font": "Arial-Bold", "stroke_color": "#00B4D8", "stroke_width": 2.5}
 }
-PREMIUM_STYLES = {"glow_purple", "valorant", "comic_book", "professional", "horror", "retro_wave", "fire", "ice"}
+PREMIUM_STYLES = {}
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq", "reddit": "jpuuy9amUxVn651Jjmtq"}
 CHARACTER_IMAGE_PATHS = {"peter": os.path.join(STATIC_DIR, "peter.png"), "brian": os.path.join(STATIC_DIR, "brian.png")}
@@ -44,14 +32,22 @@ BACKGROUND_VIDEO_URLS = {
 }
 cloudinary.config(cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"), api_key=os.getenv("CLOUDINARY_API_KEY"), api_secret=os.getenv("CLOUDINARY_API_SECRET"), secure=True)
 
-# --- HELPER FUNCTIONS ---
 def update_job_progress(message: str):
     job = get_current_job(); job.meta['progress'] = message; job.save_meta() if job else None; print(f"Job Progress: {message}")
+
 def download_file(url, local_filename):
     with requests.get(url, stream=True) as r: r.raise_for_status(); open(local_filename, 'wb').write(r.content)
     return local_filename
+
 def generate_audio_elevenlabs(text, filename, voice_id):
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"; headers = {"Accept": "audio/mpeg", "Content-Type": "application/json", "xi-api-key": ELEVENLABS_API_KEY}; data = {"text": text, "model_id": "eleven_multilingual_v2"}; r = requests.post(url, json=data, headers=headers); r.raise_for_status(); open(filename, "wb").write(r.content)
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {"Accept": "audio/mpeg", "Content-Type": "application/json", "xi-api-key": ELEVENLABS_API_KEY}
+    data = {"text": text, "model_id": "eleven_multilingual_v2"}
+    response = requests.post(url, json=data, headers=headers)
+    response.raise_for_status()
+    with open(filename, "wb") as f:
+        f.write(response.content)
+
 def format_count(num_str):
     try:
         if isinstance(num_str, (int, float)): num = num_str
@@ -62,36 +58,20 @@ def format_count(num_str):
         return str(int(num))
     except (ValueError, TypeError): return num_str
 
-# --- THE DEFINITIVE, UNBREAKABLE REDDIT IMAGE GENERATION FUNCTION ---
 def create_reddit_post_image(data):
     job_id = get_current_job().id
     template_path = os.path.join(STATIC_DIR, "reddit_template_final.png")
     font_bold = ImageFont.truetype(os.path.join(STATIC_DIR, "Inter-SemiBold.ttf"), 28)
     font_heavy = ImageFont.truetype(os.path.join(STATIC_DIR, "Inter-SemiBold.ttf"), 44)
-    
-    img = Image.open(template_path).convert("RGBA")
-    draw = ImageDraw.Draw(img)
-
-    subreddit_text = data.get('subreddit', 'r/stories')
-    title_text = data.get('title', '')
-    upvotes_text = format_count(data.get('upvotes', '99+'))
-    comments_text = format_count(data.get('comments', '99+'))
-
-    draw.text((120, 48), subreddit_text, font=font_bold, fill="#000000")
-    
+    img = Image.open(template_path).convert("RGBA"); draw = ImageDraw.Draw(img)
+    draw.text((120, 48), data.get('subreddit', 'r/stories'), font=font_bold, fill="#000000")
     y_pos = 155
-    for line in textwrap.wrap(title_text, width=40):
-        draw.text((60, y_pos), line, font=font_heavy, fill="#1a1b1e")
-        y_pos += 55
-
-    draw.text((150, 485), upvotes_text, font=font_bold, fill="#636466", anchor="ls")
-    draw.text((310, 485), comments_text, font=font_bold, fill="#636466", anchor="ls")
-
-    filename = f"temp_reddit_frame_{job_id}.png"
-    img.save(filename)
+    for line in textwrap.wrap(data.get('title', ''), width=40): draw.text((60, y_pos), line, font=font_heavy, fill="#1a1b1e"); y_pos += 55
+    draw.text((150, 485), format_count(data.get('upvotes', '99+')), font=font_bold, fill="#636466", anchor="ls")
+    draw.text((310, 485), format_count(data.get('comments', '99+')), font=font_bold, fill="#636466", anchor="ls")
+    filename = f"temp_reddit_frame_{job_id}.png"; img.save(filename)
     return filename
 
-# --- Main RQ Task Functions ---
 def create_reddit_video_task(reddit_data: dict, options: dict):
     update_job_progress("Initializing Reddit video..."); temp_files = []
     try:
