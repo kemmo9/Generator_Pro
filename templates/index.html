@@ -37,6 +37,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            color: white; /* Make the spinner visible */
         }
         #preview-loader.loader-hidden {
             display: none;
@@ -46,9 +47,9 @@
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
         }
-        @media (max-width: 960px) { /* Adjust breakpoint for better responsiveness */
+        @media (max-width: 960px) {
             .reddit-layout { grid-template-columns: 1fr; }
-            #reddit-preview-container { position: static; margin-bottom: 2rem; }
+            #reddit-preview-container { position: static; margin-bottom: 2rem; order: -1; }
         }
     </style>
 </head>
@@ -120,7 +121,7 @@
                                 <input type="text" id="reddit-subreddit" name="subreddit" value="r/stories">
                                 <input type="text" id="reddit-username" name="username" value="u/Anonymous">
                             </div>
-                             <div class="input-grid-small">
+                            <div class="input-grid-small">
                                 <input type="text" id="reddit-upvotes" name="upvotes" value="23.4">
                                 <input type="text" id="reddit-comments" name="comments" value="1.7k">
                             </div>
@@ -128,8 +129,9 @@
                             <textarea id="reddit-body" name="body" placeholder="Main story text..."></textarea>
                         </form>
                         <div id="reddit-preview-container">
-                            <img id="reddit-preview-image" src="/static/reddit_post_template.png" alt="Reddit Post Preview">
-                            <div id="preview-loader" class="loader-hidden"><div class="spinner"></div></div>
+                            <!-- THE FIX: Default src is now the full Cloudinary URL -->
+                            <img id="reddit-preview-image" src="https://res.cloudinary.com/dh2bzsmyd/image/upload/v1751488346/reddit_post_template_nqq3u9.png" alt="Reddit Post Preview">
+                            <div id="preview-loader" class="loader-hidden"><i class="fa-solid fa-spinner spinner"></i></div>
                         </div>
                     </div>
                 </div>
@@ -182,20 +184,19 @@
             const scrollLeftBtn = document.getElementById('scroll-left');
             const scrollRightBtn = document.getElementById('scroll-right');
             
-            if (scrollLeftBtn && subtitleSelector) {
+            if (scrollLeftBtn) {
                 scrollLeftBtn.addEventListener('click', () => {
-                    const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
-                    subtitleSelector.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                    subtitleSelector.scrollBy({ left: -220, behavior: 'smooth' });
                 });
             }
 
-            if (scrollRightBtn && subtitleSelector) {
+            if (scrollRightBtn) {
                 scrollRightBtn.addEventListener('click', () => {
-                    const scrollAmount = subtitleSelector.querySelector('.option-box').offsetWidth * 2;
-                    subtitleSelector.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                    subtitleSelector.scrollBy({ left: 220, behavior: 'smooth' });
                 });
             }
 
+            // --- Live Reddit Preview Logic ---
             const redditForm = document.getElementById('reddit-form');
             const previewImage = document.getElementById('reddit-preview-image');
             const loader = document.getElementById('preview-loader');
@@ -223,14 +224,14 @@
                         previewImage.src = URL.createObjectURL(imageBlob);
                     } catch (error) { console.error("Preview Error:", error); }
                     finally { if (loader) loader.classList.add('loader-hidden'); }
-                }, 400);
+                }, 500);
             };
-
             if (redditForm) {
                 redditForm.addEventListener('input', refreshPreview);
-                refreshPreview(); // Initial preview on page load
+                // No initial preview call needed, as the default is set in the HTML src
             }
             
+            // --- Generate Button Logic ---
             const generateBtn = document.getElementById('generate-btn');
             generateBtn.addEventListener('click', async () => {
                 if (!IS_AUTHENTICATED) { window.location.href = '/login'; return; }
@@ -240,20 +241,20 @@
                 generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
                 generateBtnText.textContent = 'Generating...';
                 const statusArea = document.getElementById('status-area');
-                statusArea.textContent = 'Starting...';
+                statusArea.textContent = 'Starting job...';
 
                 const activeTemplate = document.querySelector('#template-selector .option-box.selected').dataset.template;
-                let dataPayload;
+                let payload;
 
                 if (activeTemplate === 'character') {
-                    dataPayload = { dialogue_data: Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, imagePlacement: r.querySelector('.placement-select').value, text: r.querySelector('.dialogue-input').value })).filter(l => l.text) };
-                    if (dataPayload.dialogue_data.length === 0) {
+                    payload = { dialogue_data: Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, imagePlacement: r.querySelector('.placement-select').value, text: r.querySelector('.dialogue-input').value })).filter(l => l.text), options: { template: 'character', backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style } };
+                    if (payload.dialogue_data.length === 0) {
                         alert('Please enter at least one line of dialogue.');
                         generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                         return;
                     }
-                } else {
-                    dataPayload = { reddit_data: { 
+                } else { // Reddit
+                    payload = { reddit_data: { 
                         pfp_url: document.getElementById('reddit-pfp-url').value,
                         subreddit: document.getElementById('reddit-subreddit').value,
                         username: document.getElementById('reddit-username').value,
@@ -261,17 +262,14 @@
                         body: document.getElementById('reddit-body').value,
                         upvotes: document.getElementById('reddit-upvotes').value,
                         comments: document.getElementById('reddit-comments').value
-                    }};
-                    if (!dataPayload.reddit_data.title) {
+                    }, options: { template: 'reddit', backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style }};
+                    if (!payload.reddit_data.title) {
                         alert('Please enter a Reddit title.');
                         generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                         return;
                     }
                 }
                 
-                const optionsPayload = { template: activeTemplate, backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, subtitleStyle: document.querySelector('#subtitle-selector .option-box.selected').dataset.style };
-                const payload = { ...dataPayload, options: optionsPayload };
-
                 try {
                     const response = await fetch('/api/generate-video', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
                     if (!response.ok) { const err = await response.json(); throw new Error(err.detail || 'Failed to start job.'); }
@@ -285,21 +283,15 @@
                         statusArea.textContent = `Status: ${statusData.progress}`;
                         if (statusData.status === 'finished' || statusData.status === 'failed') {
                             clearInterval(intervalId);
-                            generateBtn.disabled = false;
-                            generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
-                            generateBtnText.textContent = 'Generate Video';
+                            generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                             if (statusData.status === 'finished') {
                                 statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Clip</a>`;
-                            } else {
-                                statusArea.textContent = `Failed: ${statusData.progress}`;
-                            }
+                            } else { statusArea.textContent = `Failed: ${statusData.progress}`; }
                         }
                     }, 3000);
                 } catch (error) {
                     statusArea.textContent = `Error: ${error.message}`;
-                    generateBtn.disabled = false;
-                    generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
-                    generateBtnText.textContent = 'Generate Video';
+                    generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                 }
             });
             
@@ -320,7 +312,7 @@
                     selectedOption.classList.add('selected');
                 });
             });
-
+            
             document.querySelector('#template-selector .option-box.selected').dispatchEvent(new Event('click'));
         });
     </script>
