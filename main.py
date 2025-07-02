@@ -10,69 +10,109 @@ from starlette.middleware.sessions import SessionMiddleware
 from rq import Queue
 import redis
 
-# Import from tasks.py
-from tasks import PREMIUM_STYLES, create_video_task, create_reddit_video_task, create_reddit_preview_image
+# --- THE FIX: Import all necessary functions from our definitive tasks.py ---
+from tasks import (
+    PREMIUM_STYLES, 
+    create_video_task, 
+    create_reddit_video_task, 
+    create_reddit_preview_image
+)
 
 # --- App Initialization & Config ---
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("APP_SECRET_KEY", "a_very_long_and_super_secret_string_for_local_testing"))
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY"); STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET = os.getenv('AUTH0_DOMAIN'), os.getenv('AUTH0_CLIENT_ID'), os.getenv('AUTH0_CLIENT_SECRET')
+
+# This middleware is essential for storing the user's login session in a secure cookie.
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=os.getenv("APP_SECRET_KEY", "a_very_long_and_super_secret_string_for_local_testing_only")
+)
+
+# Load secrets and configurations from environment variables
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
+AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID')
+AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET')
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
-conn = redis.from_url(REDIS_URL); q = Queue(connection=conn)
+# Initialize Redis Queue
+conn = redis.from_url(REDIS_URL)
+q = Queue(connection=conn)
+
+# Mount static files (CSS, images) and configure templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# Configure Auth0 OAuth client for handling logins
 oauth = OAuth()
 oauth.register(
-    name='auth0', client_id=AUTH0_CLIENT_ID, client_secret=AUTH0_CLIENT_SECRET,
+    name='auth0',
+    client_id=AUTH0_CLIENT_ID,
+    client_secret=AUTH0_CLIENT_SECRET,
     server_metadata_url=f"https://{AUTH0_DOMAIN}/.well-known/openid-configuration",
     client_kwargs={'scope': 'openid profile email update:users'}
 )
 
-# --- User Session & Page Routes ---
-async def get_user(request: Request): return request.session.get('user')
+# --- User Session Dependency ---
+async def get_user(request: Request):
+    """A dependency that safely gets the current user from the session cookie, if they exist."""
+    return request.session.get('user')
 
+# --- Page Rendering Routes ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, user: dict = Depends(get_user)):
     return templates.TemplateResponse("index.html", {"request": request, "user": user})
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def read_pricing(request: Request, user: dict = Depends(get_user)):
-    return templates.TemplateResponse("pricing.html", {"request": request, "user": user, "stripe_publishable_key": os.getenv("STRIPE_PUBLISHABLE_KEY")})
+    stripe_publishable_key = os.getenv("STRIPE_PUBLISHABLE_KEY")
+    return templates.TemplateResponse("pricing.html", {"request": request, "user": user, "stripe_publishable_key": stripe_publishable_key})
 
 @app.get('/favicon.ico', include_in_schema=False)
-async def favicon(): return FileResponse(os.path.join("static", "favicon.ico"))
+async def favicon():
+    return FileResponse(os.path.join("static", "favicon.ico"))
 
-# --- Auth Routes ---
+# --- Authentication Routes ---
 @app.get('/login')
 async def login(request: Request):
-    return await oauth.auth0.authorize_redirect(request, "https://www.makeaclip.pro/callback")
+    redirect_uri = "https://www.makeaclip.pro/callback"
+    return await oauth.auth0.authorize_redirect(request, redirect_uri)
 
 @app.get('/logout')
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse(url=f"https://{AUTH0_DOMAIN}/v2/logout?client_id={AUTH0_CLIENT_ID}&returnTo=https://www.makeaclip.pro")
+    logout_url = f"https://{AUTH0_DOMAIN}/v2/logout?client_id={AUTH0_CLIENT_ID}&returnTo=https://www.makeaclip.pro"
+    return RedirectResponse(url=logout_url)
 
 @app.get('/callback')
 async def callback(request: Request):
-    token = await oauth.auth0.authorize_access_token(request); request.session['user'] = token['userinfo']; return RedirectResponse(url="/")
+    token = await oauth.auth0.authorize_access_token(request)
+    request.session['user'] = token['userinfo']
+    return RedirectResponse(url="/")
 
 # --- API Routes ---
+
+# --- THIS IS THE NEW PREVIEW ENDPOINT ---
 @app.post("/api/generate-reddit-preview")
 async def generate_reddit_preview(data: dict = Body(...)):
     """Generates and returns a static preview image for the Reddit editor."""
     try:
+        # Calls the dedicated preview function from tasks.py
         image_path = create_reddit_preview_image(data)
-        return FileResponse(image_path, media_type="image/png",_headers={"X-Delete-After-Use": "true"})
+        # Return the generated image directly
+        return FileResponse(image_path, media_type="image/png", headers={"X-Delete-After-Use": "true"})
     except Exception as e:
         print(f"Error generating preview: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate preview image.")
+    finally:
+        # A failsafe to clean up the preview image from the server after sending
+        if 'image_path' in locals() and os.path.exists(image_path):
+            os.remove(image_path)
+
 
 @app.post("/api/create-checkout-session")
 async def create_checkout_session(request: Request, payload: dict = Body(...), user: dict = Depends(get_user)):
-    if not user: raise HTTPException(status_code=401, detail="Must be logged in.")
+    if not user: raise HTTPException(status_code=401, detail="You must be logged in to subscribe.")
     try:
         session = stripe.checkout.Session.create(
             line_items=[{'price': payload.get("price_id"), 'quantity': 1}], mode='subscription',
@@ -92,17 +132,19 @@ async def stripe_webhook(request: Request):
 async def queue_video_task(request: Request, payload: dict = Body(...), user: dict = Depends(get_user)):
     if not user: raise HTTPException(status_code=401, detail="Not authenticated")
     options = payload.get("options", {}); selected_style = options.get("subtitleStyle")
-    user_tier = user.get("https://makeaclip.pro/tier", "free") 
+    user_tier = user.get("https://makeaclip.pro/tier", "free")
 
     if selected_style in PREMIUM_STYLES and user_tier == "free":
         raise HTTPException(status_code=403, detail=f"'{selected_style.replace('_', ' ').title()}' is premium. Please upgrade.")
     
     template = options.get("template")
+    # This block now correctly routes to the right function in tasks.py
     if template == "reddit":
         job = q.enqueue(create_reddit_video_task, payload.get("reddit_data", {}), options, job_timeout='5m')
     elif template == "character":
         job = q.enqueue(create_video_task, payload.get("dialogue_data", []), options, job_timeout='5m')
-    else: raise HTTPException(status_code=400, detail="Invalid template specified.")
+    else: 
+        raise HTTPException(status_code=400, detail="Invalid template specified.")
     
     return JSONResponse({"job_id": job.id})
 
