@@ -5,6 +5,7 @@ services:
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
+    # This is the critical fix for the ImageMagick error
     nativeEnvironment:
       systemPackages:
         - imagemagick
@@ -61,3 +62,5 @@ services:
   - type: redis
     name: makeaclip-redis
     plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
