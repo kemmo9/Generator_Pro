@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* Additional styles for the new Reddit editor layout and loader */
+        /* Scoped styles for the new Reddit editor layout and loader */
         .reddit-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -25,6 +25,7 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 1rem;
+            min-height: 400px;
         }
         #reddit-preview-image {
             max-width: 100%;
@@ -45,9 +46,9 @@
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 960px) { /* Adjust breakpoint for better responsiveness */
             .reddit-layout { grid-template-columns: 1fr; }
-            #reddit-preview-container { position: static; }
+            #reddit-preview-container { position: static; margin-bottom: 2rem; }
         }
     </style>
 </head>
@@ -119,7 +120,7 @@
                                 <input type="text" id="reddit-subreddit" name="subreddit" value="r/stories">
                                 <input type="text" id="reddit-username" name="username" value="u/Anonymous">
                             </div>
-                            <div class="input-grid-small">
+                             <div class="input-grid-small">
                                 <input type="text" id="reddit-upvotes" name="upvotes" value="23.4">
                                 <input type="text" id="reddit-comments" name="comments" value="1.7k">
                             </div>
@@ -166,8 +167,11 @@
             const addDialogueBtn = document.getElementById('add-dialogue-btn');
 
             document.querySelectorAll('#template-selector .option-box').forEach(box => {
-                box.addEventListener('click', () => {
-                    const template = box.dataset.template;
+                box.addEventListener('click', (event) => {
+                    document.querySelectorAll('#template-selector .option-box').forEach(b => b.classList.remove('selected'));
+                    event.currentTarget.classList.add('selected');
+                    const template = event.currentTarget.dataset.template;
+                    
                     dialogueEditor.style.display = template === 'character' ? 'block' : 'none';
                     redditEditor.style.display = template === 'reddit' ? 'block' : 'none';
                     addDialogueBtn.style.display = template === 'character' ? 'flex' : 'none';
@@ -192,7 +196,6 @@
                 });
             }
 
-            // --- Live Reddit Preview Logic ---
             const redditForm = document.getElementById('reddit-form');
             const previewImage = document.getElementById('reddit-preview-image');
             const loader = document.getElementById('preview-loader');
@@ -220,12 +223,14 @@
                         previewImage.src = URL.createObjectURL(imageBlob);
                     } catch (error) { console.error("Preview Error:", error); }
                     finally { if (loader) loader.classList.add('loader-hidden'); }
-                }, 400); // Debounce delay of 400ms
+                }, 400);
             };
-            if (redditForm) { redditForm.addEventListener('input', refreshPreview); refreshPreview(); }
 
+            if (redditForm) {
+                redditForm.addEventListener('input', refreshPreview);
+                refreshPreview(); // Initial preview on page load
+            }
             
-            // --- Generate Button Logic ---
             const generateBtn = document.getElementById('generate-btn');
             generateBtn.addEventListener('click', async () => {
                 if (!IS_AUTHENTICATED) { window.location.href = '/login'; return; }
@@ -239,6 +244,7 @@
 
                 const activeTemplate = document.querySelector('#template-selector .option-box.selected').dataset.template;
                 let dataPayload;
+
                 if (activeTemplate === 'character') {
                     dataPayload = { dialogue_data: Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, imagePlacement: r.querySelector('.placement-select').value, text: r.querySelector('.dialogue-input').value })).filter(l => l.text) };
                     if (dataPayload.dialogue_data.length === 0) {
@@ -297,7 +303,6 @@
                 }
             });
             
-            // --- General UI Initialization Logic ---
             const dialogueContainer = document.getElementById('dialogue-container');
             const rowTemplate = document.getElementById('dialogue-row-template');
             const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
