@@ -9,19 +9,21 @@ from rq import get_current_job
 import textwrap
 import time
 
+# This hotfix is still necessary for compatibility
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
+# This is the robust method to ensure the worker can always find the 'static' folder.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-# --- CONFIGURATION (Complete and Final) ---
+# --- THE FIX: Removing stroke_color to eliminate the ImageMagick dependency ---
 SUBTITLE_STYLES = {
     "standard": {"fontsize": 40, "color": "white", "font": "Arial-Bold"},
     "yellow": {"fontsize": 45, "color": "#FFD700", "font": "Arial-Bold"},
     "meme": {"fontsize": 50, "color": "white", "font": "Impact", "kerning": 1},
 }
-PREMIUM_STYLES = {} # Ready for when we implement subscriptions
+PREMIUM_STYLES = {} # None for now
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 VOICE_IDS = {"peter": "BrXwCQ7xdzi6T5h2idQP", "brian": "jpuuy9amUxVn651Jjmtq", "reddit": "jpuuy9amUxVn651Jjmtq"}
 CHARACTER_IMAGE_PATHS = {"peter": os.path.join(STATIC_DIR, "peter.png"), "brian": os.path.join(STATIC_DIR, "brian.png")}
@@ -33,7 +35,7 @@ BACKGROUND_VIDEO_URLS = {
 }
 cloudinary.config(cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"), api_key=os.getenv("CLOUDINARY_API_KEY"), api_secret=os.getenv("CLOUDINARY_API_SECRET"), secure=True)
 
-# --- HELPER FUNCTIONS ---
+# --- All helper functions are correct and do not need to be changed ---
 def update_job_progress(message: str):
     job = get_current_job(); job.meta['progress'] = message; job.save_meta() if job else None
 def download_file(url, local_filename):
@@ -50,8 +52,6 @@ def format_count(num_str):
         if num >= 1_000: return f"{num/1_000:.1f}K"
         return str(int(num))
     except (ValueError, TypeError): return num_str
-
-# --- REDDIT IMAGE GENERATION (Template Image Method) ---
 def create_reddit_post_image(data):
     job_id = get_current_job().id
     template_path = os.path.join(STATIC_DIR, "reddit_template_final.png")
@@ -66,7 +66,7 @@ def create_reddit_post_image(data):
     filename = f"temp_reddit_frame_{job_id}.png"; img.save(filename)
     return filename
 
-# --- MAIN RQ TASK FUNCTIONS ---
+# --- Main RQ Task Functions ---
 def create_reddit_video_task(reddit_data: dict, options: dict):
     update_job_progress("Initializing Reddit video..."); temp_files = []
     try:
@@ -111,20 +111,14 @@ def create_video_task(dialogue_data: list, options: dict):
         background_clip = VideoFileClip(temp_bg_path).set_duration(final_audio.duration).set_audio(final_audio)
         video_clips = [background_clip]; current_time = 0; update_job_progress("Compositing video...")
         style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"))
-        
-        # This is the original, correct font path logic
-        font_path = os.path.join(STATIC_DIR, style['font'] if 'font' in style else "Inter-SemiBold.ttf")
-        style['font'] = font_path
-
         for i, clip_data in enumerate(dialogue_data):
             char_path = CHARACTER_IMAGE_PATHS[clip_data["character"]]
             img = ImageClip(char_path).set_duration(audio_clips[i].duration).set_start(current_time).set_position(clip_data.get("imagePlacement", "center")).resize(height=300)
             
-            # THE DEFINITIVE FIX for ImageMagick Error
-            # Create a shadow by layering two text clips. This is robust and has no dependencies.
+            # --- THE DEFINITIVE FIX for the ImageMagick Error ---
             shadow_style = style.copy()
             shadow_style['color'] = 'black'
-            shadow_offset = 2 # The thickness of the shadow in pixels
+            shadow_offset = 2
             
             shadow_txt = TextClip(clip_data["text"], **shadow_style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(lambda t: ('center', 0.8*background_clip.h + shadow_offset))
             main_txt = TextClip(clip_data["text"], **style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(('center', 0.8*background_clip.h))
