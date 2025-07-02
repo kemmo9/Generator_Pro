@@ -2,11 +2,10 @@ services:
   - type: web
     name: makeaclip-web
     env: python
-    # This tells Render to run our build script before starting the server
-    buildCommand: "./build.sh"
+    # THE FIX: Use a python script for the build command
+    buildCommand: "python build.py"
     startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
-    plan: free # Or your preferred instance type
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.4
@@ -15,7 +14,7 @@ services:
           type: redis
           name: makeaclip-redis
           property: connectionString
-      # All your secrets from the Render dashboard will be available here
+      # All your secrets are synced from your Render dashboard
       - key: AUTH0_DOMAIN
         sync: false
       - key: AUTH0_CLIENT_ID
@@ -36,8 +35,8 @@ services:
   - type: worker
     name: makeaclip-worker
     env: python
-    # The worker also needs the same build process
-    buildCommand: "./build.sh"
+    # THE FIX: Use a python script for the build command
+    buildCommand: "python build.py"
     startCommand: "python worker.py"
     envVars:
       - key: PYTHON_VERSION
@@ -61,4 +60,4 @@ services:
     name: makeaclip-redis
     plan: free
     maxmemoryPolicy: allkeys-lru
-    ipAllowList: [] # Keep empty to allow access from other Render services
+    ipAllowList: []
