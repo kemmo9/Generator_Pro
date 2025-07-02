@@ -1,14 +1,22 @@
 services:
   # 1. The Web Service
+  # Handles user logins, serves the website, and queues jobs.
   - type: web
-    name: ai-video-web
+    name: makeaclip-web
     env: python
-    healthCheckPath: /health
+    # The standard build command for pip.
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.4
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: makeaclip-redis # Match the redis service name below
+          property: connectionString
+      # All secrets are synced from your Render dashboard
       - key: AUTH0_DOMAIN
         sync: false
       - key: AUTH0_CLIENT_ID
@@ -23,19 +31,23 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: ai-video-queue
-          property: connectionString
       - key: HCTI_USER_ID
-        sync: false # Web service might need it later
+        sync: false
       - key: HCTI_API_KEY
-        sync: false # Web service might need it later
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
 
   # 2. The Background Worker
+  # Processes the video generation jobs from the queue.
   - type: worker
-    name: ai-video-worker
+    name: makeaclip-worker
     env: python
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python worker.py"
@@ -45,8 +57,17 @@ services:
       - key: REDIS_URL
         fromService:
           type: redis
-          name: ai-video-queue
+          name: makeaclip-redis # Match the redis service name below
           property: connectionString
+      # All secrets needed by the worker for its tasks
+      - key: AUTH0_DOMAIN
+        sync: false
+      - key: AUTH0_CLIENT_ID
+        sync: false
+      - key: AUTH0_CLIENT_SECRET
+        sync: false
+      - key: APP_SECRET_KEY
+        sync: false
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
@@ -55,15 +76,15 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      # --- THE FIX: ADDING THE MISSING SECRETS TO THE WORKER ---
       - key: HCTI_USER_ID
         sync: false
       - key: HCTI_API_KEY
         sync: false
 
   # 3. The Redis Queue
+  # The message broker that connects the web service and the worker.
   - type: redis
-    name: ai-video-queue
+    name: makeaclip-redis
     plan: free
     maxmemoryPolicy: allkeys-lru
-    ipAllowList: []
+    ipAllowList: [] # Keep empty to allow access from other Render services
