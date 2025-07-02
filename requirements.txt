@@ -1,15 +1,32 @@
+# FastAPI and Web Server
 fastapi==0.100.0
 uvicorn[standard]==0.22.0
-python-multipart==0.0.6
-requests==2.31.0
-moviepy==1.0.3
-Jinja2==3.1.2
-rq==1.15.1
-python-dotenv==1.0.0
-cloudinary==1.33.0
-imageio-ffmpeg==0.4.8
+
+# Authentication & Security
 authlib==1.2.1
 python-jose[cryptography]==3.3.0
-httpx==0.25.0
 itsdangerous==2.1.2
+
+# Stripe Payments
 stripe==8.5.0
+
+# Background Tasks & Queueing
+rq==1.15.1
+redis==5.0.1
+
+# Video & Image Processing
+moviepy==1.0.3
+Pillow==10.0.1 # Explicitly a.k.a. PIL
+imageio-ffmpeg==0.4.8
+
+# Data & API Interaction
+requests==2.31.0
+httpx==0.25.0 # Required by authlib
+anyio==3.7.1 # Required for async file operations
+
+# Cloud Storage
+cloudinary==1.33.0
+
+# General Utilities
+python-dotenv==1.0.0
+Jinja2==3.1.2
