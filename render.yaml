@@ -2,10 +2,13 @@ services:
   - type: web
     name: makeaclip-web
     env: python
-    # THE FIX: Use a python script for the build command
-    buildCommand: "python build.py"
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
+    # THE DEFINITIVE FIX: This section tells Render to install ImageMagick
+    nativeEnvironment:
+      systemPackages:
+        - imagemagick
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.4
@@ -14,7 +17,7 @@ services:
           type: redis
           name: makeaclip-redis
           property: connectionString
-      # All secrets are synced from your Render dashboard
+      # Add all your secrets here from the Render dashboard
       - key: AUTH0_DOMAIN
         sync: false
       - key: AUTH0_CLIENT_ID
@@ -35,9 +38,12 @@ services:
   - type: worker
     name: makeaclip-worker
     env: python
-    # THE FIX: Use a python script for the build command
-    buildCommand: "python build.py"
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "python worker.py"
+    # This also gives the worker access to ImageMagick
+    nativeEnvironment:
+      systemPackages:
+        - imagemagick
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.4
@@ -46,7 +52,7 @@ services:
           type: redis
           name: makeaclip-redis
           property: connectionString
-      # All secrets needed by the worker for its tasks
+      # Add all secrets the worker needs
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
