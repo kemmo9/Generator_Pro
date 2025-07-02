@@ -58,23 +58,35 @@ def generate_audio_elevenlabs(text, filename, voice_id):
     url=f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"; headers={"xi-api-key": ELEVENLABS_API_KEY}; data={"text": text}; r=requests.post(url, json=data, headers=headers); r.raise_for_status(); open(filename, "wb").write(r.content)
 
 def create_reddit_post_image(data: dict):
+    """Generates the static image of the Reddit post header and body."""
     template_path = os.path.join(STATIC_DIR, "reddit_post_template.png")
     pfp_path = os.path.join(STATIC_DIR, "default_pfp.png")
-    temp_files = []
+    temp_files_local = []
+    
     try:
+        # Download user-provided PFP if URL is valid
         if data.get("pfp_url") and "http" in data["pfp_url"]:
-            pfp_path = f"temp_pfp_preview_{int(time.time())}.png"; temp_files.append(pfp_path)
-            download_file(data["pfp_url"], pfp_path)
+            pfp_download_path = f"temp_pfp_download_{int(time.time())}.png"
+            temp_files_local.append(pfp_download_path)
+            try:
+                download_file(data["pfp_url"], pfp_download_path)
+                pfp_path = pfp_download_path
+            except Exception as e:
+                print(f"Could not download PFP: {e}. Using default.")
 
         template = PILImage.open(template_path).convert("RGBA")
         pfp = PILImage.open(pfp_path).convert("RGBA").resize((68, 68))
-        mask = PILImage.new('L', pfp.size, 0); draw_mask = ImageDraw.Draw(mask); draw_mask.ellipse((0, 0) + pfp.size, fill=255)
+        
+        mask = PILImage.new('L', pfp.size, 0)
+        draw_mask = ImageDraw.Draw(mask)
+        draw_mask.ellipse((0, 0) + pfp.size, fill=255)
+        
         template.paste(pfp, (45, 42), mask)
         
         draw = ImageDraw.Draw(template)
         font_bold = ImageFont.truetype(os.path.join(STATIC_DIR, "Inter-SemiBold.ttf"), 28)
         font_heavy = ImageFont.truetype(os.path.join(STATIC_DIR, "Inter-Bold.ttf"), 44)
-        
+
         draw.text((125, 52), data.get('subreddit', 'r/stories'), font=font_bold, fill="#c7c9ca")
         draw.text((310, 52), f"• Posted by {data.get('username', 'u/Anonymous')}", font=font_bold, fill="#7f8284")
         y_pos = 145
@@ -87,10 +99,21 @@ def create_reddit_post_image(data: dict):
         template.save(output_filename, "PNG")
         return output_filename
     finally:
-        for f in temp_files:
+        for f in temp_files_local:
             if os.path.exists(f): os.remove(f)
 
-# --- Main Task Functions ---
+# --- THIS IS THE MISSING PREVIEW FUNCTION, NOW INCLUDED AND CORRECT ---
+def create_reddit_preview_image(data: dict):
+    """A lightweight version for generating only the preview image, without audio/video processing."""
+    try:
+        image_path = create_reddit_post_image(data)
+        return image_path
+    except Exception as e:
+        print(f"Error in preview generation: {e}")
+        # Return a path to a fallback/error image if needed
+        return os.path.join(STATIC_DIR, "error_preview.png")
+
+# --- MAIN TASK FUNCTIONS ---
 def create_reddit_video_task(reddit_data: dict, options: dict):
     job_id = get_current_job().id
     temp_files = []
@@ -113,9 +136,11 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
         
         update_job_progress("Rendering video...")
         final_video.write_videofile(output_path, codec="libx264", audio_codec="aac", fps=24)
+        
         update_job_progress("Uploading to cloud...")
         upload_result = cloudinary.uploader.upload(output_path, resource_type="video")
         
+        update_job_progress("Finished!")
         return {"video_url": upload_result['secure_url']}
     finally:
         for f in temp_files:
@@ -123,7 +148,7 @@ def create_reddit_video_task(reddit_data: dict, options: dict):
 
 def create_video_task(dialogue_data: list, options: dict):
     job_id = get_current_job().id
-    temp_files, audio_clips = [], []
+    temp_files, audio_clips, video_clips = [], [], []
     try:
         selected_style = SUBTITLE_STYLES.get(options.get("subtitleStyle", "standard"))
         bg_url = BACKGROUND_VIDEO_URLS.get(options.get("backgroundVideo", "minecraft_parkour1"))
@@ -142,9 +167,11 @@ def create_video_task(dialogue_data: list, options: dict):
         composited_clips = [background_clip]
         current_time = 0
         for i, line_data in enumerate(dialogue_data):
-            img = ImageClip(CHARACTER_IMAGE_PATHS[line_data["character"]]).set_duration(audio_clips[i].duration).set_start(current_time).resize(height=300).set_position(line_data.get("imagePlacement", "center"))
-            txt = TextClip(line_data["text"], **selected_style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(("center", 0.8), relative=True)
-            composited_clips.extend([img, txt])
+            img_clip = ImageClip(CHARACTER_IMAGE_PATHS[line_data["character"]]).set_duration(audio_clips[i].duration).set_start(current_time).resize(height=300).set_position(line_data.get("imagePlacement", "center"))
+            video_clips.append(img_clip) # Add to list for later cleanup
+            txt_clip = TextClip(line_data["text"], **selected_style, size=(background_clip.w * 0.8, None), method='caption').set_duration(audio_clips[i].duration).set_start(current_time).set_position(("center", 0.8), relative=True)
+            video_clips.append(txt_clip) # Add to list for later cleanup
+            composited_clips.extend([img_clip, txt_clip])
             current_time += audio_clips[i].duration
         
         final_video = CompositeVideoClip(composited_clips, size=background_clip.size)
@@ -155,9 +182,14 @@ def create_video_task(dialogue_data: list, options: dict):
         
         update_job_progress("Uploading..."); upload_result = cloudinary.uploader.upload(output_path, resource_type="video")
         
+        update_job_progress("Finished!")
         return {"video_url": upload_result['secure_url']}
     finally:
-        for clip in audio_clips:
+        # Robust cleanup
+        if 'final_video' in locals(): final_video.close()
+        for clip in audio_clips + video_clips:
             if clip: clip.close()
+        if 'final_audio' in locals(): final_audio.close()
+        if 'background_clip' in locals(): background_clip.close()
         for f in temp_files:
             if os.path.exists(f): os.remove(f)
