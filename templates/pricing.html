@@ -5,121 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pricing - Make a Clip</title>
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://js.stripe.com/v3/"></script>
-    <style>
-        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; max-width: 1100px; margin: 2rem auto; }
-        .pricing-card { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 2rem; display: flex; flex-direction: column; text-align: center;}
-        .pricing-card.popular { border-color: var(--primary-color); }
-        .card-header h2 { font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--primary-color); }
-        .card-header .price { font-size: 2.5rem; font-weight: 700; }
-        .card-header .price span { font-size: 1rem; color: var(--text-secondary); font-weight: 400; }
-        .features { list-style: none; padding: 0; margin: 2rem 0; flex-grow: 1; text-align: left; }
-        .features li { margin-bottom: 1rem; }
-        .cta-button { margin-top: auto; }
-        @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; } }
-    </style>
 </head>
 <body>
     <div class="site-container">
-        <!-- Desktop Header -->
         <header class="desktop-header">
+            <div class="auth-buttons">
+                {% if user %}<a href="/logout" class="nav-button">Log Out</a>{% else %}<a href="/login" class="nav-button">Log In</a>{% endif %}
+            </div>
             <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
             <ul class="nav-menu">
                 <li><a href="/">Editor</a></li>
                 <li><a href="/pricing" class="active">Pricing</a></li>
             </ul>
-            <div class="auth-buttons">
-                {% if user %}<a href="/logout" class="nav-button">Log Out</a>{% else %}<a href="/login" class="nav-button">Log In / Sign Up</a>{% endif %}
-            </div>
         </header>
-
-        <!-- Mobile Header -->
-        <div class="mobile-header">
-            <h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1>
-        </div>
-        
+        <div class="mobile-header"><h1><i class="fa-solid fa-bolt"></i> Make a Clip</h1></div>
         <main>
-            <div class="pricing-grid">
-                <!-- Free Tier -->
-                <div class="pricing-card">
-                    <div class="card-header"><h2>Free</h2><p class="price">$0<span>/mo</span></p></div>
-                    <ul class="features">
-                        <li>1,500 words/month</li><li>Max 15 second videos</li><li>720p Resolution / 30 FPS</li><li>Watermark & Ads</li>
-                    </ul>
-                    <a href="/" class="nav-button cta-button">Start Creating</a>
-                </div>
-                <!-- Pro Tier -->
-                <div class="pricing-card popular">
-                    <div class="card-header"><h2>Pro</h2><p class="price">$7<span>/mo</span></p></div>
-                    <ul class="features">
-                        <li>5,000 words/month</li><li>Max 30 second videos</li><li>1080p Resolution / 60 FPS</li><li>No Watermark, No Ads</li>
-                    </ul>
-                    <button id="subscribe-pro" class="nav-button cta-button">Subscribe to Pro</button>
-                </div>
-                <!-- Platinum Tier -->
-                <div class="pricing-card">
-                    <div class="card-header"><h2>Platinum</h2><p class="price">$25<span>/mo</span></p></div>
-                    <ul class="features">
-                        <li>30,000 words/month</li><li>Max 1 minute videos</li><li>4K Resolution / 60 FPS</li><li>No Watermark, No Ads</li>
-                    </ul>
-                    <button id="subscribe-platinum" class="nav-button cta-button">Subscribe to Platinum</button>
-                </div>
-            </div>
-            <div id="status-area" style="text-align: center; margin-top: 1rem; min-height: 24px;"></div>
+            <!-- Pricing content will go here -->
+            <p style="text-align:center; margin-top: 5rem;">Pricing page coming soon!</p>
         </main>
     </div>
-
-    <!-- Mobile Navigation Bar -->
     <nav class="mobile-nav">
-        <a href="/"><i class="fa-solid fa-wand-magic-sparkles"></i> Editor</a>
-        <a href="/pricing" class="active"><i class="fa-solid fa-tags"></i> Pricing</a>
-        {% if user %}<a href="/logout"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>{% else %}<a href="/login" class="nav-button">Log In</a>{% endif %}
+        <a href="/">Editor</a>
+        <a href="/pricing" class="active">Pricing</a>
+        {% if user %}<a href="/logout">Log Out</a>{% else %}<a href="/login">Log In</a>{% endif %}
     </nav>
-    
-    <script>
-        const stripe = Stripe('{{ stripe_publishable_key }}');
-        const statusArea = document.getElementById('status-area');
-        const isAuthenticated = {{ 'true' if user else 'false' }};
-
-        // --- THE FIX: Using the correct Price IDs you just provided ---
-        const proPriceId = 'price_1RfXZkFf7LkPmPagMZDqc90f';
-        const platinumPriceId = 'price_1RfXbEFf7LkPmPagZg0PpntS';
-
-        const handleSubscription = (priceId) => {
-            if (!isAuthenticated) {
-                window.location.href = '/login';
-                return;
-            }
-            statusArea.textContent = 'Redirecting to checkout...';
-            fetch('/api/create-checkout-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ price_id: priceId })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw new Error(err.detail || 'Could not create checkout session.') });
-                }
-                return response.json();
-            })
-            .then(session => {
-                return stripe.redirectToCheckout({ sessionId: session.id });
-            })
-            .catch(error => {
-                console.error('Subscription Error:', error);
-                statusArea.textContent = `Error: ${error.message}`;
-            });
-        };
-        
-        document.getElementById('subscribe-pro').addEventListener('click', () => handleSubscription(proPriceId));
-        document.getElementById('subscribe-platinum').addEventListener('click', () => handleSubscription(platinumPriceId));
-
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('checkout_status') === 'success') {
-            statusArea.textContent = 'Subscription successful! Your plan is now active.';
-        } else if (urlParams.get('checkout_status') === 'cancel') {
-            statusArea.textContent = 'Subscription process was cancelled. You can try again anytime.';
-        }
-    </script>
 </body>
 </html>
