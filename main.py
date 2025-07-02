@@ -1,15 +1,13 @@
 import os
 import json
-import stripe
-from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, Request, Body, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from authlib.integrations.starlette_client import OAuth
 from rq import Queue
 import redis
-
 from tasks import PREMIUM_STYLES
 
 # --- Configuration & Initialization ---
@@ -21,8 +19,6 @@ app.add_middleware(
 )
 
 # Load secrets from environment
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
 AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID')
 AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET')
@@ -53,8 +49,7 @@ async def read_root(request: Request, user: dict = Depends(get_user)):
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def read_pricing(request: Request, user: dict = Depends(get_user)):
-    stripe_publishable_key = os.getenv("STRIPE_PUBLISHABLE_KEY")
-    return templates.TemplateResponse("pricing.html", {"request": request, "user": user, "stripe_publishable_key": stripe_publishable_key})
+    return templates.TemplateResponse("pricing.html", {"request": request, "user": user})
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
@@ -83,30 +78,22 @@ async def callback(request: Request):
 async def queue_video_task(request: Request, payload: dict = Body(...), user: dict = Depends(get_user)):
     if not user: raise HTTPException(status_code=401, detail="Not authenticated")
     
-    options_data = payload.get("options", {})
-    selected_style = options_data.get("subtitleStyle")
-    user_tier = "pro" # Assume pro for testing
+    options = payload.get("options", {})
+    if options.get("subtitleStyle") in PREMIUM_STYLES and user.get("app_metadata", {}).get("tier", "free") == "free":
+        raise HTTPException(status_code=403, detail="Premium style requires upgrade.")
 
-    if selected_style in PREMIUM_STYLES and user_tier == "free":
-        raise HTTPException(status_code=403, detail=f"'{selected_style}' is a premium style. Please upgrade.")
-    
-    template = options_data.get("template")
-    if template == "reddit":
-        job = q.enqueue('tasks.create_reddit_video_task', payload.get("reddit_data", {}), options_data, job_timeout='20m')
-    elif template == "character":
-        job = q.enqueue('tasks.create_video_task', payload.get("dialogue_data", []), options_data, job_timeout='15m')
+    if options.get("template") == 'reddit':
+        job = q.enqueue('tasks.create_reddit_video_task', payload.get("reddit_data", {}), options, job_timeout='20m')
     else:
-        raise HTTPException(status_code=400, detail="Invalid template specified.")
+        job = q.enqueue('tasks.create_video_task', payload.get("dialogue_data", []), options, job_timeout='15m')
     
-    return {"job_id": job.id}
+    return JSONResponse({"job_id": job.id})
 
 @app.get("/api/job-status/{job_id}")
 async def get_job_status(job_id: str):
     job = q.fetch_job(job_id)
-    if job is None: raise HTTPException(status_code=404, detail="Job not found.")
-    response_data = {"job_id": job.id, "status": job.get_status(), "progress": job.meta.get('progress', 'In queue...'), "result": job.result}
-    if job.is_failed: response_data["progress"] = f"Job Failed: {job.exc_info or 'Unknown error'}"
-    return JSONResponse(response_data)
+    if not job: raise HTTPException(status_code=404)
+    return JSONResponse({"status": job.get_status(), "progress": job.meta.get('progress', 'In queue...'), "result": job.result})
 
 @app.get("/health")
 async def health_check():
