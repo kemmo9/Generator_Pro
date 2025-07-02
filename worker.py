@@ -1,18 +1,23 @@
 import os
 import redis
-from rq import Connection, Worker
+from rq import Worker, Queue, Connection
 
-# This is the crucial part that was missing.
-# It tells the worker to listen on the default queue.
+# Define the queues to listen to. 'default' is the standard queue.
 listen = ['default']
 
 # Get the Redis URL from the environment variables provided by Render.
+# Fallback to a local Redis instance for testing if needed.
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+
+# Establish a connection to the Redis server.
 conn = redis.from_url(redis_url)
 
 if __name__ == '__main__':
-    # When this script is run, create a connection and start a worker.
-    # The worker will now correctly import and run jobs from tasks.py
+    # Use a Connection context manager to ensure the connection is handled correctly.
     with Connection(conn):
-        worker = Worker(map(str, listen))
+        # Create a Worker instance that listens on the specified queues.
+        worker = Worker(map(Queue, listen))
+        
+        # Start the worker. It will now wait for and execute jobs from the queue.
+        # This is a blocking call, the script will run here indefinitely.
         worker.work()
