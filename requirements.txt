@@ -1,4 +1,4 @@
-# FastAPI and Web Server
+# Web Framework & Server
 fastapi==0.100.0
 uvicorn[standard]==0.22.0
 
@@ -6,6 +6,7 @@ uvicorn[standard]==0.22.0
 authlib==1.2.1
 python-jose[cryptography]==3.3.0
 itsdangerous==2.1.2
+auth0-python-sdk==4.5.0
 
 # Stripe Payments
 stripe==8.5.0
@@ -14,15 +15,15 @@ stripe==8.5.0
 rq==1.15.1
 redis==5.0.1
 
-# Video & Image Processing
+# Video, Image, and Audio Processing
 moviepy==1.0.3
-Pillow==10.0.1 # Explicitly a.k.a. PIL
+Pillow==10.0.1
 imageio-ffmpeg==0.4.8
 
 # Data & API Interaction
 requests==2.31.0
-httpx==0.25.0 # Required by authlib
-anyio==3.7.1 # Required for async file operations
+httpx==0.25.0
+anyio==3.7.1
 
 # Cloud Storage
 cloudinary==1.33.0
