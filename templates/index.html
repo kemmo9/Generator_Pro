@@ -7,24 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
-    <style>
-        /* Scoped styles for the Reddit editor layout and new UI elements */
-        .reddit-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
-        #reddit-preview-container { position: sticky; top: 2rem; display: flex; align-items: center; justify-content: center; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; min-height: 400px; }
-        #reddit-preview-image { max-width: 100%; border-radius: 6px; transition: opacity 0.2s; }
-        #preview-loader { position: absolute; display: flex; align-items: center; justify-content: center; color: white; }
-        #preview-loader.loader-hidden { display: none; }
-        .input-grid-small { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .checkbox-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; }
-        .subtitle-size-container { display: flex; flex-direction: column; gap: 0.5rem; }
-        .subtitle-size-container label { font-weight: 500; }
-        input[type="range"] { width: 100%; }
-
-        @media (max-width: 960px) {
-            .reddit-layout { grid-template-columns: 1fr; }
-            #reddit-preview-container { position: static; margin-bottom: 2rem; order: -1; }
-        }
-    </style>
 </head>
 <body>
     <div class="site-container">
@@ -63,10 +45,9 @@
                 <div class="option-box" data-video="subway_surfers2"><img src="/static/subwaysurfer2.png" alt="Subway Surfers 2"><div class="label">Subway Surfers 2</div></div>
             </div>
 
-            <!-- NEW: Subtitle Size Slider -->
             <p class="step-title"><span class="accent-text">Step 3:</span> Customize Subtitles</p>
             <div class="subtitle-size-container">
-                <label for="subtitle-size-slider">Subtitle Size</label>
+                <label for="subtitle-size-slider">Subtitle Size: <span id="subtitle-size-value">Normal</span></label>
                 <input type="range" id="subtitle-size-slider" min="0.75" max="1.5" value="1.0" step="0.05">
             </div>
 
@@ -78,7 +59,6 @@
                 <div id="reddit-editor" style="display: none;">
                     <div class="reddit-layout">
                         <form id="reddit-form" class="reddit-editor-form">
-                            <!-- NEW Reddit Form Fields -->
                             <select id="reddit-narrator-voice" name="narrator_voice">
                                 <option value="reddit_default" selected>Default Narrator</option>
                                 <option value="brian">Brian</option>
@@ -149,7 +129,6 @@
                 });
             });
 
-            // Live Reddit Preview Logic
             const redditForm = document.getElementById('reddit-form');
             const previewImage = document.getElementById('reddit-preview-image');
             const loader = document.getElementById('preview-loader');
@@ -179,43 +158,48 @@
             };
             if (redditForm) { redditForm.addEventListener('input', refreshPreview); }
             
-            // Generate Button Logic
+            const subtitleSizeSlider = document.getElementById('subtitle-size-slider');
+            const subtitleSizeValue = document.getElementById('subtitle-size-value');
+            subtitleSizeSlider.addEventListener('input', () => {
+                const value = parseFloat(subtitleSizeSlider.value);
+                if (value < 0.9) subtitleSizeValue.textContent = 'Small';
+                else if (value > 1.1) subtitleSizeValue.textContent = 'Large';
+                else subtitleSizeValue.textContent = 'Normal';
+            });
+
             const generateBtn = document.getElementById('generate-btn');
             generateBtn.addEventListener('click', async () => {
                 if (!IS_AUTHENTICATED) { window.location.href = '/login'; return; }
-                generateBtn.disabled = true; generateBtn.querySelector('.text').textContent = 'Generating...';
-                generateBtn.querySelector('.icon').innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
+                const generateBtnIcon = generateBtn.querySelector('.icon');
+                const generateBtnText = generateBtn.querySelector('.text');
+                generateBtn.disabled = true;
+                generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
+                generateBtnText.textContent = 'Generating...';
                 const statusArea = document.getElementById('status-area');
                 statusArea.textContent = 'Starting job...';
 
                 const activeTemplate = document.querySelector('#template-selector .option-box.selected').dataset.template;
-                const subtitleSizeMultiplier = parseFloat(document.getElementById('subtitle-size-slider').value);
+                const subtitleSizeMultiplier = parseFloat(subtitleSizeSlider.value);
                 let payload;
 
                 if (activeTemplate === 'character') {
                     const dialogueData = Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, text: r.querySelector('.dialogue-input').value, imagePlacement: 'center' })).filter(l => l.text);
-                    if (dialogueData.length === 0) { alert('Please enter at least one line of dialogue.'); /* Reset button */ return; }
-                    payload = { dialogue_data: dialogueData, options: { template: 'character', backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, subtitle_size_multiplier: subtitleSizeMultiplier } };
+                    if (dialogueData.length === 0) { /* Reset button */ return; }
+                    payload = { dialogue_data: dialogueData, options: { template: 'character', backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, subtitle_size_multiplier: subtitleSizeMultiplier, subtitleStyle: 'standard' } }; // Added default subtitle style
                 } else { // Reddit
                     payload = {
                         reddit_data: { 
-                            pfp_url: document.getElementById('reddit-pfp-url').value,
-                            subreddit: document.getElementById('reddit-subreddit').value,
-                            username: document.getElementById('reddit-username').value,
-                            title: document.getElementById('reddit-title').value,
-                            body: document.getElementById('reddit-body').value,
-                            upvotes: document.getElementById('reddit-upvotes').value,
-                            comments: document.getElementById('reddit-comments').value,
-                            is_verified: document.getElementById('reddit-verified').checked
+                            pfp_url: document.getElementById('reddit-pfp-url').value, subreddit: document.getElementById('reddit-subreddit').value,
+                            username: document.getElementById('reddit-username').value, title: document.getElementById('reddit-title').value,
+                            body: document.getElementById('reddit-body').value, upvotes: document.getElementById('reddit-upvotes').value,
+                            comments: document.getElementById('reddit-comments').value, is_verified: document.getElementById('reddit-verified').checked
                         }, 
                         options: { 
-                            template: 'reddit', 
-                            backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, 
-                            narrator_voice: document.getElementById('reddit-narrator-voice').value,
-                            subtitle_size_multiplier: subtitleSizeMultiplier
+                            template: 'reddit', backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, 
+                            narrator_voice: document.getElementById('reddit-narrator-voice').value, subtitle_size_multiplier: subtitleSizeMultiplier, subtitleStyle: 'standard' // Added default subtitle style
                         }
                     };
-                    if (!payload.reddit_data.title) { alert('Please enter a Reddit title.'); /* Reset button */ return; }
+                    if (!payload.reddit_data.title) { /* Reset button */ return; }
                 }
                 
                 try {
@@ -231,14 +215,14 @@
                         statusArea.textContent = `Status: ${statusData.progress}`;
                         if (statusData.status === 'finished' || statusData.status === 'failed') {
                             clearInterval(intervalId);
-                            generateBtn.disabled = false; generateBtn.querySelector('.icon').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtn.querySelector('.text').textContent = 'Generate Video';
+                            generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                             if (statusData.status === 'finished') { statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Clip</a>`; } 
                             else { statusArea.textContent = `Failed: ${statusData.progress}`; }
                         }
                     }, 3000);
                 } catch (error) {
                     statusArea.textContent = `Error: ${error.message}`;
-                    generateBtn.disabled = false; generateBtn.querySelector('.icon').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtn.querySelector('.text').textContent = 'Generate Video';
+                    generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
                 }
             });
             
@@ -251,7 +235,7 @@
                 if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove();
             });
 
-            document.querySelectorAll('#background-selector .option-box').forEach(box => {
+            document.querySelectorAll('#template-selector .option-box, #background-selector .option-box').forEach(box => {
                 box.addEventListener('click', (event) => {
                     const grid = event.target.closest('.selector-grid');
                     grid.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
