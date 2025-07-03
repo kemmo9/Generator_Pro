@@ -26,22 +26,8 @@ body {
 }
 
 /* --- DESKTOP HEADER --- */
-.desktop-header {
-    display: block;
-    position: relative;
-    text-align: center;
-    padding: 1rem 0;
-    margin-bottom: 3rem;
-    margin-top: 1rem;
-}
-.desktop-header h1 {
-    font-size: 2.8rem;
-    font-weight: 700;
-    margin: 0 0 1rem 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-}
+.desktop-header { display: block; position: relative; text-align: center; padding: 1rem 0; margin-bottom: 3rem; margin-top: 1rem; }
+.desktop-header h1 { font-size: 2.8rem; font-weight: 700; margin: 0 0 1rem 0; display: inline-flex; align-items: center; gap: 0.75rem; }
 .desktop-header h1 .fa-bolt { color: var(--primary-color); }
 .desktop-header .auth-buttons { position: absolute; right: 0; top: 0; }
 .desktop-header .nav-menu { display: flex; justify-content: center; align-items: center; gap: 2.5rem; list-style: none; padding: 0; margin: 0; }
@@ -59,7 +45,6 @@ body {
 .option-box.selected { border-color: var(--primary-color); }
 .option-box img { width: 100%; flex-grow: 1; object-fit: cover; border-radius: 6px; aspect-ratio: 9/16; }
 .option-box .label { font-weight: 500; margin-top: 0.75rem; font-size: 0.9rem; }
-.pro-badge { position: absolute; top: 8px; right: 8px; background: var(--primary-color); color: #121212; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 6px; }
 
 /* --- REDDIT EDITOR & PREVIEW STYLES --- */
 .reddit-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
@@ -68,17 +53,21 @@ body {
 #preview-loader { position: absolute; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; }
 #preview-loader.loader-hidden { display: none; }
 .input-grid-small { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.checkbox-container { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; }
-.checkbox-container label { font-weight: 500; cursor: pointer; }
+.checkbox-container { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-color); cursor: pointer;}
+.checkbox-container label { font-weight: 500; cursor: pointer; flex-grow: 1; }
+input[type="checkbox"] { accent-color: var(--primary-color); width: 1.2rem; height: 1.2rem; }
 
-/* --- SUBTITLE SLIDER & FORM STYLES --- */
+/* --- NEW: SUBTITLE SLIDER & FORM STYLES --- */
 .subtitle-size-container { display: flex; flex-direction: column; gap: 0.5rem; background-color: var(--surface-color); padding: 1rem 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); }
-.subtitle-size-container label { font-weight: 500; }
-input[type="range"] { width: 100%; accent-color: var(--primary-color); }
+.subtitle-size-container label { font-weight: 600; color: var(--text-color); }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; background: var(--border-color); border-radius: 5px; outline: none; transition: opacity .2s; cursor: pointer; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; background: var(--primary-color); border-radius: 50%; cursor: pointer; }
+input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; background: var(--primary-color); border-radius: 50%; cursor: pointer; }
+
 select, input, textarea { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-size: 1rem; width: 100%; box-sizing: border-box; font-family: 'Inter', sans-serif; }
 textarea { min-height: 120px; resize: vertical; }
 .dialogue-box, .reddit-editor-form { border: 1px solid var(--border-color); background-color: var(--surface-color); border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;}
-.dialogue-row { display: grid; grid-template-columns: 1fr 3fr auto; gap: 1rem; align-items: center; } /* Simplified dialogue row */
+.dialogue-row { display: grid; grid-template-columns: 1fr 3fr auto; gap: 1rem; align-items: center; }
 .dialogue-row .remove-btn { background: #e94560; border: none; border-radius: 50%; width: 32px; height: 32px; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0;}
 
 /* --- CONTROLS --- */
