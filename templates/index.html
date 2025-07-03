@@ -46,9 +46,19 @@
             </div>
 
             <p class="step-title"><span class="accent-text">Step 3:</span> Customize Subtitles</p>
-            <div class="subtitle-size-container">
-                <label for="subtitle-size-slider">Subtitle Size: <span id="subtitle-size-value">Normal</span></label>
-                <input type="range" id="subtitle-size-slider" min="0.75" max="1.5" value="1.0" step="0.05">
+            <div class="subtitle-customizer">
+                <div class="subtitle-size-container">
+                    <label for="subtitle-size-slider">Subtitle Size: <span id="subtitle-size-value">Normal</span></label>
+                    <input type="range" id="subtitle-size-slider" min="0.75" max="1.5" value="1.0" step="0.05">
+                </div>
+                <div class="subtitle-animation-container">
+                    <label for="subtitle-animation-select">Animation Style</label>
+                    <select id="subtitle-animation-select" name="word_group_size">
+                        <option value="1">1 Word</option>
+                        <option value="3" selected>3 Words (Default)</option>
+                        <option value="5">5 Words</option>
+                    </select>
+                </div>
             </div>
 
             <p class="step-title"><span class="accent-text">Step 4:</span> Write Your Script</p>
@@ -68,16 +78,12 @@
                                 <input type="text" id="reddit-subreddit" name="subreddit" value="r/stories">
                                 <input type="text" id="reddit-username" name="username" value="u/Anonymous">
                             </div>
-                            <div class="input-grid-small">
-                                <input type="text" id="reddit-upvotes" name="upvotes" value="23.4">
-                                <input type="text" id="reddit-comments" name="comments" value="1.7k">
-                            </div>
-                            <input type="text" id="reddit-title" name="title" placeholder="Reddit Post Title..." required>
-                            <textarea id="reddit-body" name="body" placeholder="Main story text..."></textarea>
                             <div class="checkbox-container">
                                 <input type="checkbox" id="reddit-verified" name="is_verified">
                                 <label for="reddit-verified">Show Verified Checkmark</label>
                             </div>
+                            <input type="text" id="reddit-title" name="title" placeholder="Reddit Post Title..." required>
+                            <textarea id="reddit-body" name="body" placeholder="Main story text..."></textarea>
                         </form>
                         <div id="reddit-preview-container">
                             <img id="reddit-preview-image" src="https://res.cloudinary.com/dh2bzsmyd/image/upload/v1751499682/blank_reddit_template_ohysli.png" alt="Reddit Post Preview">
@@ -129,6 +135,7 @@
                 });
             });
 
+            // Live Reddit Preview Logic
             const redditForm = document.getElementById('reddit-form');
             const previewImage = document.getElementById('reddit-preview-image');
             const loader = document.getElementById('preview-loader');
@@ -143,8 +150,6 @@
                         subreddit: document.getElementById('reddit-subreddit').value,
                         username: document.getElementById('reddit-username').value,
                         title: document.getElementById('reddit-title').value,
-                        upvotes: document.getElementById('reddit-upvotes').value,
-                        comments: document.getElementById('reddit-comments').value,
                         is_verified: document.getElementById('reddit-verified').checked
                     };
                     try {
@@ -157,7 +162,7 @@
                 }, 500);
             };
             if (redditForm) { redditForm.addEventListener('input', refreshPreview); }
-            
+
             const subtitleSizeSlider = document.getElementById('subtitle-size-slider');
             const subtitleSizeValue = document.getElementById('subtitle-size-value');
             subtitleSizeSlider.addEventListener('input', () => {
@@ -166,40 +171,40 @@
                 else if (value > 1.1) subtitleSizeValue.textContent = 'Large';
                 else subtitleSizeValue.textContent = 'Normal';
             });
-
+            
+            // Generate Button Logic
             const generateBtn = document.getElementById('generate-btn');
             generateBtn.addEventListener('click', async () => {
                 if (!IS_AUTHENTICATED) { window.location.href = '/login'; return; }
-                const generateBtnIcon = generateBtn.querySelector('.icon');
-                const generateBtnText = generateBtn.querySelector('.text');
-                generateBtn.disabled = true;
-                generateBtnIcon.innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
-                generateBtnText.textContent = 'Generating...';
-                const statusArea = document.getElementById('status-area');
-                statusArea.textContent = 'Starting job...';
+                generateBtn.disabled = true; generateBtn.querySelector('.text').textContent = 'Generating...';
+                generateBtn.querySelector('.icon').innerHTML = '<i class="fa-solid fa-spinner spinner"></i>';
+                const statusArea = document.getElementById('status-area'); statusArea.textContent = 'Starting job...';
 
                 const activeTemplate = document.querySelector('#template-selector .option-box.selected').dataset.template;
-                const subtitleSizeMultiplier = parseFloat(subtitleSizeSlider.value);
+                const optionsPayload = {
+                    template: activeTemplate,
+                    backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video,
+                    subtitle_size_multiplier: parseFloat(subtitleSizeSlider.value)
+                };
                 let payload;
 
                 if (activeTemplate === 'character') {
                     const dialogueData = Array.from(document.querySelectorAll('.dialogue-row')).map(r => ({ character: r.querySelector('.character-select').value, text: r.querySelector('.dialogue-input').value, imagePlacement: 'center' })).filter(l => l.text);
-                    if (dialogueData.length === 0) { /* Reset button */ return; }
-                    payload = { dialogue_data: dialogueData, options: { template: 'character', backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, subtitle_size_multiplier: subtitleSizeMultiplier, subtitleStyle: 'standard' } }; // Added default subtitle style
+                    if (dialogueData.length === 0) { alert('Please enter at least one line of dialogue.'); /* Reset button */ return; }
+                    payload = { dialogue_data: dialogueData, options: optionsPayload };
                 } else { // Reddit
+                    optionsPayload.narrator_voice = document.getElementById('reddit-narrator-voice').value;
+                    optionsPayload.word_group_size = parseInt(document.getElementById('subtitle-animation-select').value, 10);
+                    
                     payload = {
                         reddit_data: { 
                             pfp_url: document.getElementById('reddit-pfp-url').value, subreddit: document.getElementById('reddit-subreddit').value,
                             username: document.getElementById('reddit-username').value, title: document.getElementById('reddit-title').value,
-                            body: document.getElementById('reddit-body').value, upvotes: document.getElementById('reddit-upvotes').value,
-                            comments: document.getElementById('reddit-comments').value, is_verified: document.getElementById('reddit-verified').checked
+                            body: document.getElementById('reddit-body').value, is_verified: document.getElementById('reddit-verified').checked
                         }, 
-                        options: { 
-                            template: 'reddit', backgroundVideo: document.querySelector('#background-selector .option-box.selected').dataset.video, 
-                            narrator_voice: document.getElementById('reddit-narrator-voice').value, subtitle_size_multiplier: subtitleSizeMultiplier, subtitleStyle: 'standard' // Added default subtitle style
-                        }
+                        options: optionsPayload
                     };
-                    if (!payload.reddit_data.title) { /* Reset button */ return; }
+                    if (!payload.reddit_data.title) { alert('Please enter a Reddit title.'); /* Reset button */ return; }
                 }
                 
                 try {
@@ -215,17 +220,18 @@
                         statusArea.textContent = `Status: ${statusData.progress}`;
                         if (statusData.status === 'finished' || statusData.status === 'failed') {
                             clearInterval(intervalId);
-                            generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
+                            generateBtn.disabled = false; generateBtn.querySelector('.icon').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtn.querySelector('.text').textContent = 'Generate Video';
                             if (statusData.status === 'finished') { statusArea.innerHTML = `<p>Video ready!</p><a href="${statusData.result.video_url}" target="_blank" rel="noopener noreferrer">Download Clip</a>`; } 
                             else { statusArea.textContent = `Failed: ${statusData.progress}`; }
                         }
                     }, 3000);
                 } catch (error) {
                     statusArea.textContent = `Error: ${error.message}`;
-                    generateBtn.disabled = false; generateBtnIcon.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtnText.textContent = 'Generate Video';
+                    generateBtn.disabled = false; generateBtn.querySelector('.icon').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; generateBtn.querySelector('.text').textContent = 'Generate Video';
                 }
             });
             
+            // General UI Initialization
             const dialogueContainer = document.getElementById('dialogue-container');
             const rowTemplate = document.getElementById('dialogue-row-template');
             const addRow = () => dialogueContainer.appendChild(rowTemplate.content.cloneNode(true));
@@ -233,14 +239,6 @@
             addDialogueBtn.addEventListener('click', addRow);
             dialogueContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('remove-btn')) e.target.closest('.dialogue-row').remove();
-            });
-
-            document.querySelectorAll('#template-selector .option-box, #background-selector .option-box').forEach(box => {
-                box.addEventListener('click', (event) => {
-                    const grid = event.target.closest('.selector-grid');
-                    grid.querySelectorAll('.option-box').forEach(opt => opt.classList.remove('selected'));
-                    event.target.closest('.option-box').classList.add('selected');
-                });
             });
             
             document.querySelector('#template-selector .option-box.selected').dispatchEvent(new Event('click'));
