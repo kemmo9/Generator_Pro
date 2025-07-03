@@ -20,6 +20,9 @@ moviepy==1.0.3
 Pillow==10.0.1
 imageio-ffmpeg==0.4.8
 
+# --- THE FIX: AI Model for Timestamps ---
+openai-whisper==20231117
+
 # Data & API Interaction
 requests==2.31.0
 httpx==0.25.0
